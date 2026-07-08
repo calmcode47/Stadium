@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Bebas+Neue&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-base text-primary font-body antialiased selection:bg-cyan selection:text-base;
+    background-color: #0A0E12;
+  }
+
+  /* Custom visible focus ring in cyan for accessibility */
+  *:focus-visible {
+    outline: 2px solid #00D9FF !important;
+    outline-offset: 2px !important;
+  }
+}
+
+@layer utilities {
+  /* Subtle grid pattern */
+  .bg-grid {
+    background-size: 30px 30px;
+    background-image: 
+      linear-gradient(to right, rgba(0, 217, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0, 217, 255, 0.03) 1px, transparent 1px);
+  }
+
+  /* Scanline pattern */
+  .bg-scanlines {
+    background-image: linear-gradient(
+      rgba(10, 14, 18, 0) 50%, 
+      rgba(0, 0, 0, 0.25) 50%
+    );
+    background-size: 100% 4px;
+  }
+
+  /* Combined Control Room background style */
+  .bg-control-room {
+    background-color: #0A0E12;
+    background-image: 
+      radial-gradient(circle at 50% 50%, rgba(18, 24, 31, 0.6), #0A0E12),
+      linear-gradient(to right, rgba(0, 217, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0, 217, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(rgba(10, 14, 18, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+    background-size: 100% 100%, 30px 30px, 30px 30px, 100% 4px;
+  }
+}
+
+/* Reduced motion media query block */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-delay: -1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    background-attachment: initial !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+}
