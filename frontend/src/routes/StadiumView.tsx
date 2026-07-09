@@ -39,7 +39,7 @@ export const StadiumView: React.FC = () => {
     <div className="w-full h-full lg:relative flex flex-col lg:block select-none overflow-y-auto lg:overflow-hidden p-4 lg:p-0 gap-4">
       
       {/* 3D/2D Viewport Container (Takes full parent height/width on desktop, and fixed height on mobile) */}
-      <div className="w-full h-[400px] sm:h-[480px] lg:h-full lg:absolute lg:inset-0 lg:z-0">
+      <div className="w-full h-[400px] sm:h-[480px] lg:h-full lg:absolute lg:inset-0 lg:z-0 lg:pr-[336px]">
         {isSimplified ? (
           <StadiumInteractive2D
             sections={sections}
