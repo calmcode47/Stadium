@@ -2,7 +2,6 @@ import fs from 'node:fs'
 import path from 'node:path'
 import Database from 'better-sqlite3'
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
-import { getEnv } from '../config/env'
 import * as schema from './schema'
 
 export type Db = BetterSQLite3Database<typeof schema>
@@ -15,7 +14,7 @@ interface DatabaseHandle {
 let handle: DatabaseHandle | null = null
 
 export const createDatabase = (databaseFile?: string): DatabaseHandle => {
-  const file = databaseFile ?? getEnv().DATABASE_FILE
+  const file = databaseFile ?? path.resolve(process.cwd(), process.env.DATABASE_FILE ?? './data/stadium.db')
   if (file !== ':memory:') {
     fs.mkdirSync(path.dirname(file), { recursive: true })
   }

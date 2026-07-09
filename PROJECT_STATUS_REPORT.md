@@ -76,6 +76,18 @@ Built using a modern reactive stack, the application prioritizes scanability, ra
 - **Reduced Motion Support:** Queries `prefers-reduced-motion` at the OS level to disable spatial movements (slides, scales) and drop transition durations to 0s.
 - **Mesh Optimization:** Configured R3F components to reuse geometries (Cylinder and Box geometries) for pillars and floodlights, preventing duplicate draw call instantiation.
 - **Accessibility:** Appended aria-labels to bottom tab navigation elements.
+- **Right Sidebar Label Orientation Fix:** Implemented a custom `.vertical-text` CSS utility (using `writing-mode: vertical-rl; transform: rotate(180deg);`) to rotate the collapsed sidebar's text label 180 degrees. This prevents text overflow, wraps/clipping issues, and centers it cleanly in the 48px rail.
+- **Expanded Settings Layout Fix:** Resolved a layout underflow/overlap bug where the API settings panel was obscured by the active issues list when expanded. Added `flex-shrink-0` to the collapsible settings wrapper and set the scrollable list container to `flex-1 min-h-0` to enforce dynamic remaining-space calculations.
+
+### Phase 8 — Smart Operations Assistant & AI Engine
+- **Deterministic Decision Engine (`src/lib/assistantEngine.ts`):** Developed a framework-free, pure TypeScript decision engine evaluating venue states against operational thresholds. Features 4 core evaluation rules:
+  - *Gate Congestion:* Triggers if zone capacity exceeds 85% near match end, or stands are at high capacity while exit gates are locked.
+  - *Match Delay Risk:* Flags delayed matches that jeopardize subsequent scheduled match times at shared venues.
+  - *Incident Escalation:* Monitors unacknowledged telemetry alerts per zone, raising alarms if multiple alerts build up.
+  - *Tournament Bottleneck:* Flags matches blocking round progression and subsequent brackets.
+- **AI Explanation Layer:** Connects the deterministic reasoning factors to the Google Gemini API (`gemini-2.5-flash`) for operator-ready natural language summaries, utilizing local template-based synthesis as a graceful offline fallback.
+- **Operator Command Drawer (`src/components/assistant/AssistantPanel.tsx`):** A collapsible right sidebar container presenting recommendations sorted by priority. Includes details on reasoning trails, Gemini key caching, and action buttons to Accept or Dismiss recommendations.
+- **Audit Trail Console (`src/components/assistant/DecisionLog.tsx`):** Built a session log widget showing an operator audit log of all accepted and dismissed dispatches.
 
 ---
 
@@ -91,6 +103,7 @@ Stadium/
     ├── src/
     │   ├── assets/            # App media/images
     │   ├── components/
+    │   │   ├── assistant/     # Assistant command panel, Decision logs
     │   │   ├── dashboard/     # Live Matches, Alerts, Progress panels
     │   │   ├── design-system/ # Panels, Buttons, StatusPills, ScoreDigits
     │   │   ├── layout/        # AppShell, TopBar, Sidebar
@@ -98,6 +111,7 @@ Stadium/
     │   │   ├── stadium/       # 3D Canvas, 2D Blueprints
     │   │   └── tournaments/   # Bracket Trees, Agendas
     │   ├── hooks/             # useLiveMatchSimulator hook
+    │   ├── lib/               # Deterministic decision engine and test suite
     │   ├── mocks/             # operationsData mock data
     │   ├── routes/            # Main Route page containers
     │   ├── styles/            # globals.css Tailwind stylesheet
@@ -129,8 +143,8 @@ cd frontend
 npm run build
 ```
 Successful build logs:
-- `dist/assets/index-*.css` (~24.7 kB)
-- `dist/assets/index-*.js` (~1.29 MB)
+- `dist/assets/index-*.css` (~28.8 kB)
+- `dist/assets/index-*.js` (~1.32 MB)
 
 ---
 

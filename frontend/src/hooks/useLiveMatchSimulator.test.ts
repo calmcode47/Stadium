@@ -1,72 +1,133 @@
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useLiveMatchSimulator } from './useLiveMatchSimulator'
+import { mockMatches, mockMatchEvents } from '@/mocks/operationsData'
+import type { Match, MatchEvent } from '@/types/operations'
+
+const mockState = vi.hoisted(() => ({
+  apiRequestMock: vi.fn(),
+  unsubscribeMock: vi.fn(),
+  wsHandler: null as ((match: Match) => void) | null
+}))
+
+vi.mock('@/lib/apiClient', () => ({
+  apiRequest: mockState.apiRequestMock
+}))
+
+vi.mock('@/lib/wsClient', () => ({
+  wsClient: {
+    subscribe: vi.fn((_type: string, handler: (match: Match) => void) => {
+      mockState.wsHandler = handler
+      return mockState.unsubscribeMock
+    })
+  }
+}))
+
+const backendMatches: Match[] = [
+  {
+    id: 'M-900',
+    teamHome: 'HOME',
+    teamAway: 'AWAY',
+    scoreHome: 1,
+    scoreAway: 2,
+    timeElapsed: 64,
+    isLive: true,
+    status: 'live',
+    statusLabel: 'LIVE'
+  }
+]
+
+const backendEvents: MatchEvent[] = [
+  {
+    id: 'E-900',
+    matchId: 'M-900',
+    time: "63'",
+    type: 'goal',
+    detail: 'HOME GOAL',
+    timestamp: '12:00:00'
+  }
+]
 
 describe('useLiveMatchSimulator Hook', () => {
   beforeEach(() => {
-    vi.useFakeTimers()
+    mockState.apiRequestMock.mockReset()
+    mockState.unsubscribeMock.mockReset()
+    mockState.wsHandler = null
   })
 
   afterEach(() => {
-    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
-  it('initializes matches and events with mock data', () => {
+  it('initializes with mock data before backend hydration completes', () => {
+    mockState.apiRequestMock.mockReturnValue(new Promise(() => undefined))
     const { result } = renderHook(() => useLiveMatchSimulator())
-    expect(result.current.matches.length).toBeGreaterThan(0)
-    expect(result.current.events.length).toBeGreaterThan(0)
+    expect(result.current.matches).toEqual(mockMatches)
+    expect(result.current.events).toEqual(mockMatchEvents)
   })
 
-  it('updates match clocks on an 8-second interval', () => {
-    const { result } = renderHook(() => useLiveMatchSimulator())
-    
-    // Find a live match in initial state
-    const liveMatch = result.current.matches.find(m => m.isLive && m.status === 'live')
-    expect(liveMatch).toBeDefined()
-    const initialElapsed = liveMatch!.timeElapsed
+  it('hydrates matches and events from the backend', async () => {
+    mockState.apiRequestMock
+      .mockResolvedValueOnce(backendMatches)
+      .mockResolvedValueOnce({ ...backendMatches[0], events: backendEvents })
 
-    // Advance clock by 8 seconds
-    act(() => {
-      vi.advanceTimersByTime(8000)
+    const { result } = renderHook(() => useLiveMatchSimulator())
+
+    await waitFor(() => {
+      expect(result.current.matches).toEqual(backendMatches)
+      expect(result.current.events).toEqual(backendEvents)
     })
-
-    const updatedLiveMatch = result.current.matches.find(m => m.id === liveMatch!.id)
-    expect(updatedLiveMatch!.timeElapsed).toBe(initialElapsed + 1)
+    expect(mockState.apiRequestMock).toHaveBeenCalledWith('/matches?limit=100')
+    expect(mockState.apiRequestMock).toHaveBeenCalledWith('/matches/M-900')
   })
 
-  it('triggers a random match event and updates score/event state on a 15-second interval', () => {
+  it('falls back to mock data when backend hydration fails', async () => {
+    mockState.apiRequestMock.mockRejectedValue(new Error('offline'))
+
     const { result } = renderHook(() => useLiveMatchSimulator())
-    const initialEventCount = result.current.events.length
 
-    // Advance event timer by 15 seconds
-    act(() => {
-      vi.advanceTimersByTime(15000)
+    await waitFor(() => {
+      expect(result.current.matches).toEqual(mockMatches)
+      expect(result.current.events).toEqual(mockMatchEvents)
     })
-
-    expect(result.current.events.length).toBe(initialEventCount + 1)
   })
 
-  it('cleans up its interval timers on unmount', () => {
-    const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval')
+  it('updates match state from WebSocket broadcasts and refetches detail', async () => {
+    mockState.apiRequestMock
+      .mockResolvedValueOnce(backendMatches)
+      .mockResolvedValueOnce({ ...backendMatches[0], events: backendEvents })
+      .mockResolvedValueOnce([{ ...backendMatches[0], scoreHome: 3 }])
+      .mockResolvedValueOnce({ ...backendMatches[0], scoreHome: 3, events: backendEvents })
+
+    const { result } = renderHook(() => useLiveMatchSimulator())
+    await waitFor(() => expect(result.current.matches[0]?.id).toBe('M-900'))
+
+    mockState.wsHandler?.({ ...backendMatches[0], scoreHome: 3 })
+
+    await waitFor(() => {
+      expect(result.current.matches[0]?.scoreHome).toBe(3)
+    })
+  })
+
+  it('unsubscribes from WebSocket updates on unmount', () => {
+    mockState.apiRequestMock.mockReturnValue(new Promise(() => undefined))
     const { unmount } = renderHook(() => useLiveMatchSimulator())
 
     unmount()
-    
-    // clearInterval should have been called on unmount for both timers
-    expect(clearIntervalSpy).toHaveBeenCalled()
+
+    expect(mockState.unsubscribeMock).toHaveBeenCalled()
   })
 
-  it('does not produce duplicate event IDs across updates', () => {
+  it('does not produce duplicate event IDs from backend event data', async () => {
+    mockState.apiRequestMock
+      .mockResolvedValueOnce(backendMatches)
+      .mockResolvedValueOnce({ ...backendMatches[0], events: backendEvents })
+
     const { result } = renderHook(() => useLiveMatchSimulator())
 
-    // Advance time to generate multiple events (e.g. 5 ticks of 15 seconds = 75 seconds)
-    act(() => {
-      vi.advanceTimersByTime(75000)
+    await waitFor(() => {
+      const eventIds = result.current.events.map(event => event.id)
+      expect(new Set(eventIds).size).toBe(eventIds.length)
     })
-
-    const eventIds = result.current.events.map(e => e.id)
-    const uniqueIds = new Set(eventIds)
-    expect(uniqueIds.size).toBe(eventIds.length)
   })
 })

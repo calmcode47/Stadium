@@ -1,27 +1,34 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react'
-import type { Match, VenueZone, Alert, Tournament, StandSection, Round, MatchEvent } from '../types/operations'
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import type {
+  Alert,
+  DecisionLogEntry,
+  Match,
+  MatchEvent,
+  OperatorProfile,
+  Recommendation,
+  Round,
+  StandSection,
+  Tournament,
+  VenueZone
+} from '../types/operations'
 import {
-  mockMatches,
-  mockVenueZones,
   mockAlerts,
-  mockTournament,
-  mockStandSections,
+  mockMatchEvents,
+  mockMatches,
   mockRounds,
-  mockMatchEvents
+  mockStandSections,
+  mockTournament,
+  mockVenueZones
 } from '../mocks/operationsData'
 import {
-  generateRecommendations,
-  type Recommendation
-} from '../lib/assistantEngine'
-
-export interface DecisionLogEntry {
-  operator: string
-  action: 'ACCEPTED' | 'DISMISSED'
-  timestamp: string
-  recId: string
-  title: string
-  suggestedAction: string
-}
+  apiRequest,
+  clearSession,
+  fetchOperationsSnapshot,
+  getStoredOperator,
+  getStoredToken,
+  loginRequest
+} from '../lib/apiClient'
+import { wsClient } from '../lib/wsClient'
 
 interface OperationsContextType {
   matches: Match[]
@@ -34,7 +41,15 @@ interface OperationsContextType {
   recommendations: Recommendation[]
   decisionLog: DecisionLogEntry[]
   geminiApiKey: string
+  loading: boolean
+  error: string | null
+  operator: OperatorProfile | null
+  isAuthenticated: boolean
+  authError: string | null
+  canMutate: boolean
   setGeminiApiKey: (key: string) => void
+  login: (email: string, password: string) => Promise<void>
+  logout: () => void
   acceptRecommendation: (rec: Recommendation) => void
   dismissRecommendation: (rec: Recommendation) => void
   acknowledgeAlert: (id: string) => void
@@ -50,329 +65,219 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [events, setEvents] = useState<MatchEvent[]>(mockMatchEvents)
   const [zones, setZones] = useState<VenueZone[]>(mockVenueZones)
   const [alerts, setAlerts] = useState<Alert[]>(mockAlerts)
-  const [tournament] = useState<Tournament>(mockTournament)
+  const [tournament, setTournament] = useState<Tournament>(mockTournament)
   const [rounds, setRounds] = useState<Round[]>(mockRounds)
   const [sections, setSections] = useState<StandSection[]>(mockStandSections)
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([])
   const [decisionLog, setDecisionLog] = useState<DecisionLogEntry[]>([])
   const [dismissedRecIds, setDismissedRecIds] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [operator, setOperator] = useState<OperatorProfile | null>(() => getStoredOperator())
+  const [authError, setAuthError] = useState<string | null>(null)
   const [geminiApiKey, setGeminiApiKeyState] = useState<string>(() => {
     return localStorage.getItem('GEMINI_API_KEY') || import.meta.env.VITE_GEMINI_API_KEY || ''
   })
+
+  const canMutate = operator?.role === 'admin' || operator?.role === 'operator'
 
   const setGeminiApiKey = (key: string) => {
     setGeminiApiKeyState(key)
     localStorage.setItem('GEMINI_API_KEY', key)
   }
 
-  // Refs to prevent stale closures in intervals
-  const matchesRef = useRef<Match[]>(matches)
-  const eventsRef = useRef<MatchEvent[]>(events)
+  const refreshRecommendations = useCallback(async () => {
+    try {
+      const nextRecommendations = await apiRequest<Recommendation[]>('/assistant/recommendations')
+      setRecommendations(nextRecommendations.filter(rec => !dismissedRecIds.has(rec.id)))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to refresh assistant recommendations')
+    }
+  }, [dismissedRecIds])
 
-  useEffect(() => {
-    matchesRef.current = matches
-    eventsRef.current = events
-  }, [matches, events])
-
-  // 1. Clock Ticking Simulator (ticks elapsed minutes every 8 seconds for live matches)
-  useEffect(() => {
-    const clockInterval = setInterval(() => {
-      setMatches(prevMatches =>
-        prevMatches.map(match => {
-          if (match.isLive && match.status === 'live') {
-            const nextTime = match.timeElapsed + 1
-            return {
-              ...match,
-              timeElapsed: nextTime >= 90 ? 90 : nextTime,
-              status: nextTime >= 90 ? 'completed' : 'live',
-              statusLabel: nextTime >= 90 ? 'FINAL' : 'LIVE - 2ND HALF'
-            }
-          }
-          return match
-        })
-      )
-    }, 8000)
-
-    // 2. Incident & Match Event Simulator (triggers a goal, card, or sub every 15 seconds)
-    const eventInterval = setInterval(() => {
-      const currentMatches = matchesRef.current
-      const liveMatches = currentMatches.filter(m => m.status === 'live')
-      if (liveMatches.length === 0) return
-
-      // Select a random live match
-      const targetMatch = liveMatches[Math.floor(Math.random() * liveMatches.length)]
-      
-      // Randomly select event type
-      const eventTypes: MatchEvent['type'][] = ['goal', 'card_yellow', 'card_red', 'substitution', 'timeout']
-      const randomType = eventTypes[Math.floor(Math.random() * eventTypes.length)]
-      
-      const now = new Date()
-      const timestamp = now.toTimeString().split(' ')[0]
-      const currentElapsed = `${targetMatch.timeElapsed + 1}'`
-
-      let eventDetail = ''
-      let newScoreHome = targetMatch.scoreHome
-      let newScoreAway = targetMatch.scoreAway
-
-      switch (randomType) {
-        case 'goal': {
-          const isHomeScorer = Math.random() > 0.5
-          if (isHomeScorer) {
-            newScoreHome += 1
-            eventDetail = `${targetMatch.teamHome} GOAL - Striker scored into top corner!`
-          } else {
-            newScoreAway += 1
-            eventDetail = `${targetMatch.teamAway} GOAL - Counter attack goal!`
-          }
-          break
-        }
-        case 'card_yellow': {
-          const isHome = Math.random() > 0.5
-          const player = isHome ? `${targetMatch.teamHome} defender` : `${targetMatch.teamAway} midfielder`
-          eventDetail = `YELLOW CARD: ${player} booked for simulation`
-          break
-        }
-        case 'card_red': {
-          const isHome = Math.random() > 0.5
-          const player = isHome ? `${targetMatch.teamHome} defender` : `${targetMatch.teamAway} striker`
-          eventDetail = `RED CARD: ${player} dismissed for dangerous tackle`
-          break
-        }
-        case 'substitution': {
-          const isHome = Math.random() > 0.5
-          const team = isHome ? targetMatch.teamHome : targetMatch.teamAway
-          eventDetail = `SUBSTITUTION: ${team} OUT #10, IN #14`
-          break
-        }
-        case 'timeout': {
-          eventDetail = `OFFICIAL TIMEOUT: Technical check on pitch sensors`
-          break
-        }
-      }
-
-      const randomId = Math.random().toString(36).substring(2, 11)
-      const newEvent: MatchEvent = {
-        id: `E-SIM-${Date.now()}-${randomId}`,
-        matchId: targetMatch.id,
-        time: currentElapsed,
-        type: randomType,
-        detail: eventDetail,
-        timestamp
-      }
-
-      setEvents(prev => [newEvent, ...prev])
-      setMatches(prev => 
-        prev.map(m => 
-          m.id === targetMatch.id 
-            ? { ...m, scoreHome: newScoreHome, scoreAway: newScoreAway } 
-            : m
-        )
-      )
-
-      // Automatically generate a matching live alert to trigger recommendation rules!
-      const levelMap: Record<MatchEvent['type'], Alert['level']> = {
-        goal: 'info',
-        card_yellow: 'warning',
-        card_red: 'critical',
-        substitution: 'info',
-        timeout: 'warning'
-      }
-      
-      const newAlert: Alert = {
-        id: `A-SIM-EVENT-${Date.now()}`,
-        timestamp,
-        message: `${levelMap[randomType].toUpperCase()}: Match ${targetMatch.id} event - ${eventDetail}`,
-        level: levelMap[randomType],
-        isAcknowledged: false
-      }
-      setAlerts(prev => [newAlert, ...prev])
-
-    }, 15000)
-
-    return () => {
-      clearInterval(clockInterval)
-      clearInterval(eventInterval)
+  const refreshDecisionLog = useCallback(async () => {
+    if (!getStoredToken()) return
+    try {
+      const nextLog = await apiRequest<DecisionLogEntry[]>('/assistant/decision-log?limit=50')
+      setDecisionLog(nextLog)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to refresh decision log')
     }
   }, [])
 
-  // Acknowledge alert helper
-  const acknowledgeAlert = (id: string) => {
-    setAlerts(prev =>
-      prev.map(alert => 
-        alert.id === id ? { ...alert, isAcknowledged: true } : alert
-      )
-    )
-  }
+  const refreshSnapshot = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const snapshot = await fetchOperationsSnapshot()
+      setMatches(snapshot.matches)
+      setEvents(snapshot.events)
+      setZones(snapshot.zones)
+      setAlerts(snapshot.alerts)
+      setTournament(snapshot.tournament)
+      setRounds(snapshot.rounds)
+      setSections(snapshot.sections)
+      setRecommendations(snapshot.recommendations.filter(rec => !dismissedRecIds.has(rec.id)))
+      setDecisionLog(snapshot.decisionLog)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Backend unavailable. Showing last known demo data.')
+    } finally {
+      setLoading(false)
+    }
+  }, [dismissedRecIds])
 
-  // Simulate new alert helper (from dashboard)
-  const simulateNewAlert = () => {
-    const messages = [
-      'Gate B automatic tourniquet reporting ticket read timeout',
-      'VIP Section capacity reached 98% - Stress warning',
-      'Referee requested official VAR review on Pitch Core 1',
-      'Warning: Wind speeds rising to 24km/h - Monitor roof sensors',
-      'Gate D secondary exit pathway opened for crowd venting'
+  useEffect(() => {
+    void refreshSnapshot()
+  }, [refreshSnapshot])
+
+  useEffect(() => {
+    if (!getStoredToken()) return
+    apiRequest<OperatorProfile>('/auth/me')
+      .then(setOperator)
+      .catch(() => {
+        clearSession()
+        setOperator(null)
+      })
+  }, [])
+
+  useEffect(() => {
+    const unsubscribers = [
+      wsClient.subscribe('match:updated', match => {
+        setMatches(prev => prev.map(item => (item.id === match.id ? match : item)))
+        void refreshRecommendations()
+      }),
+      wsClient.subscribe('venue:updated', venue => {
+        if ('id' in venue) {
+          setSections(prev => prev.map(section => (section.id === venue.id ? venue : section)))
+        } else {
+          setZones(prev => prev.map(zone => (zone.name === venue.name ? venue : zone)))
+        }
+        void refreshRecommendations()
+      }),
+      wsClient.subscribe('alert:created', alert => {
+        setAlerts(prev => [alert, ...prev.filter(item => item.id !== alert.id)])
+        void refreshRecommendations()
+      }),
+      wsClient.subscribe('alert:acknowledged', alert => {
+        setAlerts(prev => prev.map(item => (item.id === alert.id ? alert : item)))
+        void refreshRecommendations()
+      }),
+      wsClient.subscribe('assistant:recommendations-changed', () => {
+        void refreshRecommendations()
+        void refreshDecisionLog()
+      })
     ]
-    const levels: Alert['level'][] = ['info', 'warning', 'critical']
-    
-    const randomMsg = messages[Math.floor(Math.random() * messages.length)]
-    const randomLevel = levels[Math.floor(Math.random() * levels.length)]
-    
-    const now = new Date()
-    const timestamp = now.toTimeString().split(' ')[0]
 
-    const newAlert: Alert = {
-      id: `A-SIM-DASH-${Date.now()}`,
-      timestamp,
-      message: `${randomLevel.toUpperCase()}: ${randomMsg}`,
-      level: randomLevel,
-      isAcknowledged: false
+    return () => {
+      unsubscribers.forEach(unsubscribe => unsubscribe())
     }
+  }, [refreshDecisionLog, refreshRecommendations])
 
-    setAlerts(prev => [newAlert, ...prev])
+  const login = async (email: string, password: string) => {
+    setAuthError(null)
+    try {
+      const result = await loginRequest(email, password)
+      setOperator(result.operator)
+      await refreshSnapshot()
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : 'Login failed')
+      throw err
+    }
   }
 
-  // Toggle Gate Status (from StadiumView)
+  const logout = () => {
+    clearSession()
+    setOperator(null)
+    setDecisionLog([])
+  }
+
+  const acknowledgeAlert = (id: string) => {
+    if (!canMutate) return
+    apiRequest<Alert>(`/alerts/${id}/acknowledge`, { method: 'PATCH' })
+      .then(alert => {
+        setAlerts(prev => prev.map(item => (item.id === id ? alert : item)))
+        void refreshRecommendations()
+      })
+      .catch(err => setError(err instanceof Error ? err.message : 'Unable to acknowledge alert'))
+  }
+
+  const simulateNewAlert = () => {
+    if (!canMutate) return
+    apiRequest<Alert>('/alerts', {
+      method: 'POST',
+      body: JSON.stringify({
+        venueId: 'zone-west',
+        severity: 'warning',
+        message: 'Gate B automatic tourniquet reporting ticket read timeout'
+      })
+    })
+      .then(alert => setAlerts(prev => [alert, ...prev]))
+      .catch(err => setError(err instanceof Error ? err.message : 'Unable to create alert'))
+  }
+
   const toggleGate = (sectionId: string) => {
-    setSections(prev =>
-      prev.map(sec => sec.id === sectionId ? { ...sec, gateStatus: sec.gateStatus === 'open' ? 'closed' : 'open' } : sec)
-    )
+    if (!canMutate) return
+    const section = sections.find(item => item.id === sectionId)
+    if (!section) return
+    apiRequest<StandSection>(`/venues/${sectionId}/gate-lock`, {
+      method: 'PATCH',
+      body: JSON.stringify({ gateLocked: section.gateStatus === 'open' })
+    })
+      .then(updated => {
+        setSections(prev => prev.map(item => (item.id === sectionId ? updated : item)))
+        void refreshRecommendations()
+      })
+      .catch(err => setError(err instanceof Error ? err.message : 'Unable to toggle gate state'))
   }
 
-  // Clear Incidents (from StadiumView)
   const clearIncidents = (sectionId: string) => {
-    setSections(prev =>
-      prev.map(sec => sec.id === sectionId ? { ...sec, incidents: 0 } : sec)
-    )
+    if (!canMutate) return
+    const section = sections.find(item => item.id === sectionId)
+    if (!section) return
+
+    const sectionAlerts = alerts.filter(alert => !alert.isAcknowledged && alertMatchesSection(alert, section))
+    sectionAlerts.forEach(alert => acknowledgeAlert(alert.id))
+    setSections(prev => prev.map(item => (item.id === sectionId ? { ...item, incidents: 0 } : item)))
   }
 
-  // Calculate current recommendations based on deterministic engine
-  const recommendations = generateRecommendations({
-    matches,
-    zones,
-    alerts,
-    tournament,
-    rounds,
-    sections
-  }).filter(rec => !dismissedRecIds.has(rec.id))
-
-  // Handle recommendation ACCEPT actions with simulated side-effects
   const acceptRecommendation = (rec: Recommendation) => {
-    const now = new Date()
-    const timestamp = now.toTimeString().split(' ')[0]
-
-    setDecisionLog(prev => [
-      {
-        operator: 'OPERATOR-ALPHA',
-        action: 'ACCEPTED',
-        timestamp,
-        recId: rec.id,
-        title: rec.title,
-        suggestedAction: rec.suggestedAction
-      },
-      ...prev
-    ])
-
-    // Apply corresponding side-effects
-    if (rec.id.startsWith('REC-SECTION-')) {
-      // Unlock access gates
-      const sectionId = rec.relatedEntityId
-      setSections(prev =>
-        prev.map(sec => sec.id === sectionId ? { ...sec, gateStatus: 'open' } : sec)
-      )
-    } else if (rec.id.startsWith('REC-GATE-')) {
-      // Relieve gate congestion: adjust occupancy down and open gates
-      const zoneName = rec.relatedEntityId
-      setZones(prev =>
-        prev.map(zone =>
-          zone.name === zoneName
-            ? { ...zone, occupancy: Math.round(zone.maxCapacity * 0.72), status: 'completed', statusLabel: 'NOMINAL' }
-            : zone
-        )
-      )
-      // Mirror in stand sections if matching name
-      setSections(prev =>
-        prev.map(sec => {
-          const isEast = zoneName.includes('EAST') && sec.id === 'sect-east'
-          const isWest = zoneName.includes('WEST') && sec.id === 'sect-west'
-          if (isEast || isWest) {
-            return { ...sec, gateStatus: 'open', occupancy: Math.round(sec.maxCapacity * 0.72) }
-          }
-          return sec
-        })
-      )
-    } else if (rec.id.startsWith('REC-INCIDENT-')) {
-      // Security dispatch: acknowledge alerts & clear stand incidents in that zone
-      const zoneName = rec.relatedEntityId
-      setAlerts(prev =>
-        prev.map(a => {
-          const msg = a.message.toUpperCase()
-          let isMatch = false
-          if (zoneName.includes('WEST') && (msg.includes('GATE B') || msg.includes('WEST'))) isMatch = true
-          if (zoneName.includes('EAST') && (msg.includes('GATE A') || msg.includes('EAST'))) isMatch = true
-          if (zoneName.includes('VIP') && msg.includes('VIP')) isMatch = true
-          if (zoneName.includes('CONCOURSE') && msg.includes('CONCOURSE')) isMatch = true
-          if (zoneName.includes('CAR PARK') && msg.includes('CAR PARK')) isMatch = true
-
-          return isMatch ? { ...a, isAcknowledged: true } : a
-        })
-      )
-
-      setSections(prev =>
-        prev.map(sec => {
-          let isMatch = false
-          if (zoneName.includes('WEST') && sec.id === 'sect-west') isMatch = true
-          if (zoneName.includes('EAST') && sec.id === 'sect-east') isMatch = true
-          if (zoneName.includes('NORTH') && sec.id === 'sect-north') isMatch = true
-          if (zoneName.includes('SOUTH') && sec.id === 'sect-south') isMatch = true
-          return isMatch ? { ...sec, incidents: 0 } : sec
-        })
-      )
-    } else if (rec.id.startsWith('REC-DELAY-')) {
-      // Reschedule matches
-      const matchId = rec.relatedEntityId
-      setRounds(prev =>
-        prev.map(round => ({
-          ...round,
-          matches: round.matches.map(m =>
-            m.id === matchId
-              ? { ...m, status: 'scheduled', statusLabel: 'KICKOFF RESCHEDULED' }
-              : m
-          )
-        }))
-      )
-    }
-
-    // Dismiss the recommendation
-    setDismissedRecIds(prev => {
-      const next = new Set(prev)
-      next.add(rec.id)
-      return next
+    apiRequest<DecisionLogEntry>(`/assistant/recommendations/${rec.id}/decision`, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'accepted', operatorId: operator?.id })
     })
+      .then(log => {
+        setDecisionLog(prev => [log, ...prev])
+        setDismissedRecIds(prev => new Set(prev).add(rec.id))
+        applyAcceptedRecommendation(rec)
+      })
+      .catch(err => setError(err instanceof Error ? err.message : 'Unable to record recommendation decision'))
   }
 
-  // Handle recommendation DISMISS actions
   const dismissRecommendation = (rec: Recommendation) => {
-    const now = new Date()
-    const timestamp = now.toTimeString().split(' ')[0]
-
-    setDecisionLog(prev => [
-      {
-        operator: 'OPERATOR-ALPHA',
-        action: 'DISMISSED',
-        timestamp,
-        recId: rec.id,
-        title: rec.title,
-        suggestedAction: 'Ignored or manually resolved.'
-      },
-      ...prev
-    ])
-
-    setDismissedRecIds(prev => {
-      const next = new Set(prev)
-      next.add(rec.id)
-      return next
+    apiRequest<DecisionLogEntry>(`/assistant/recommendations/${rec.id}/decision`, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'dismissed', operatorId: operator?.id })
     })
+      .then(log => {
+        setDecisionLog(prev => [log, ...prev])
+        setDismissedRecIds(prev => new Set(prev).add(rec.id))
+      })
+      .catch(err => setError(err instanceof Error ? err.message : 'Unable to record recommendation decision'))
   }
+
+  const applyAcceptedRecommendation = (rec: Recommendation) => {
+    if (rec.id.startsWith('REC-SECTION-')) {
+      setSections(prev => prev.map(section => (section.id === rec.relatedEntityId ? { ...section, gateStatus: 'open' } : section)))
+    }
+    if (rec.id.startsWith('REC-INCIDENT-')) {
+      setAlerts(prev => prev.map(alert => (alertZoneMatches(alert, rec.relatedEntityId) ? { ...alert, isAcknowledged: true } : alert)))
+    }
+  }
+
+  const visibleRecommendations = useMemo(
+    () => recommendations.filter(rec => !dismissedRecIds.has(rec.id)),
+    [dismissedRecIds, recommendations]
+  )
 
   return (
     <OperationsContext.Provider
@@ -384,10 +289,18 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         tournament,
         rounds,
         sections,
-        recommendations,
+        recommendations: visibleRecommendations,
         decisionLog,
         geminiApiKey,
+        loading,
+        error,
+        operator,
+        isAuthenticated: Boolean(operator),
+        authError,
+        canMutate,
         setGeminiApiKey,
+        login,
+        logout,
         acceptRecommendation,
         dismissRecommendation,
         acknowledgeAlert,
@@ -398,6 +311,29 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     >
       {children}
     </OperationsContext.Provider>
+  )
+}
+
+const alertMatchesSection = (alert: Alert, section: StandSection): boolean => {
+  const message = alert.message.toUpperCase()
+  const sectionName = section.name.toUpperCase()
+  return (
+    (sectionName.includes('WEST') && (message.includes('WEST') || message.includes('GATE B') || message.includes('VIP'))) ||
+    (sectionName.includes('EAST') && (message.includes('EAST') || message.includes('GATE A'))) ||
+    (sectionName.includes('NORTH') && (message.includes('NORTH') || message.includes('CAR PARK'))) ||
+    (sectionName.includes('SOUTH') && message.includes('SOUTH'))
+  )
+}
+
+const alertZoneMatches = (alert: Alert, zone: string): boolean => {
+  const message = alert.message.toUpperCase()
+  const target = zone.toUpperCase()
+  return (
+    (target.includes('WEST') && (message.includes('WEST') || message.includes('GATE B'))) ||
+    (target.includes('EAST') && (message.includes('EAST') || message.includes('GATE A'))) ||
+    (target.includes('VIP') && message.includes('VIP')) ||
+    (target.includes('CONCOURSE') && message.includes('CONCOURSE')) ||
+    (target.includes('CAR PARK') && message.includes('CAR PARK'))
   )
 }
 

@@ -17,7 +17,7 @@ import StadiumInteractive3D from '@/components/stadium/StadiumInteractive3D'
 import StadiumInteractive2D from '@/components/stadium/StadiumInteractive2D'
 
 export const StadiumView: React.FC = () => {
-  const { sections, toggleGate, clearIncidents } = useOperations()
+  const { sections, toggleGate, clearIncidents, canMutate } = useOperations()
   const [selectedSection, setSelectedSection] = useState<StandSection | null>(null)
   const [cameraPreset, setCameraPreset] = useState<'overview' | 'pitch' | 'north'>('overview')
   const [isSimplified, setIsSimplified] = useState<boolean>(false)
@@ -195,6 +195,7 @@ export const StadiumView: React.FC = () => {
                 <Button 
                   variant={currentSection.gateStatus === 'open' ? 'secondary' : 'primary'}
                   onClick={() => toggleGate(currentSection.id)}
+                  disabled={!canMutate}
                 >
                   {currentSection.gateStatus === 'open' ? 'LOCKDOWN ACCESS GATES' : 'UNLOCK ACCESS GATES'}
                 </Button>
@@ -203,6 +204,7 @@ export const StadiumView: React.FC = () => {
                     variant="primary" 
                     className="bg-danger text-base border-danger hover:bg-transparent hover:text-danger mt-1"
                     onClick={() => clearIncidents(currentSection.id)}
+                    disabled={!canMutate}
                   >
                     RESOLVE ALL INCIDENTS
                   </Button>

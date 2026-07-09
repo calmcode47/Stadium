@@ -31,6 +31,15 @@ The platform architecture utilizes a strict two-layer design for its Smart Opera
 Stadium/
 ├── README.md                  # Root documentation and project guidelines
 ├── PROJECT_STATUS_REPORT.md   # Architectural status and phase logs
+├── backend/                   # TypeScript Express + SQLite backend
+│   ├── src/
+│   │   ├── db/                # Drizzle schema, SQLite client, seed data
+│   │   ├── modules/           # REST modules for auth, matches, venues, alerts, tournaments, assistant
+│   │   ├── realtime/          # ws WebSocket server, broadcaster, demo simulator
+│   │   ├── middleware/        # Auth, rate limits, error handling
+│   │   └── lib/               # Deterministic assistant decision engine
+│   ├── tests/                 # Vitest + Supertest backend coverage
+│   └── package.json
 └── frontend/                  # React Frontend Project Folder
     ├── public/                # Static assets (favicons, SVGs)
     ├── src/
@@ -59,63 +68,118 @@ Stadium/
 
 ---
 
-## 4. Assumptions Made
-- **Simulated Telemetry**: No real-time backend connection or WebSocket API is active in this phase. Data is generated dynamically via a custom simulation hook (`useLiveMatchSimulator`) designed to mimic active telemetry.
-- **No Authentication**: Role-based access control (e.g., separating gate override permissions for administrators) is simulated and not locked down behind a real user authentication wall.
-- **Configured Thresholds**: Recommendation triggers (e.g., 85% zone occupancy or 2 active security alerts) are illustrative defaults tuned to the mock data for demonstration purposes, rather than limits calibrated for a physical venue.
+## 4. Backend
+The backend is a local-first TypeScript Node.js service under `backend/`. It uses Express, Zod validation, Drizzle ORM, SQLite through `better-sqlite3`, JWT authentication, bcrypt password hashes, `ws` WebSockets, pino logging, helmet, CORS restrictions, rate limiting, and compression.
+
+Core data is persisted in a generated SQLite database file. The database is not committed; it is created by the seed script so the project remains cloneable and offline-evaluable without hosted services.
+
+### Backend API Summary
+- `POST /api/auth/login`, `GET /api/auth/me`
+- `GET /api/matches`, `GET /api/matches/:id`, `PATCH /api/matches/:id`, `POST /api/matches/:id/events`
+- `GET /api/venues`, `GET /api/venues/:id`, `PATCH /api/venues/:id/occupancy`, `PATCH /api/venues/:id/gate-lock`
+- `GET /api/alerts`, `POST /api/alerts`, `PATCH /api/alerts/:id/acknowledge`
+- `GET /api/tournaments`, `GET /api/tournaments/:id`, `GET /api/tournaments/:id/bracket`, `GET /api/tournaments/:id/schedule`
+- `GET /api/assistant/recommendations`, `POST /api/assistant/recommendations/:id/decision`, `GET /api/assistant/decision-log`
+- `GET /api/health`
+
+All mutating routes except login require a JWT. Match, venue, gate, and alert mutations require `admin` or `operator`; `viewer` can read but cannot mutate.
+
+### Smart Operations Assistant
+The assistant decision engine exists in both frontend and backend, with the backend as the live source once connected. It is deterministic and side-effect free: recommendations are generated from current matches, venue zones, alerts, stand sections, and bracket rounds. The four rule families are gate congestion, match delay risk, incident escalation, and tournament bottlenecks.
+
+The optional Gemini layer only explains already-generated deterministic recommendations. It never changes which recommendation appears or its priority. If `GEMINI_API_KEY` is absent or the request fails, the backend returns a local template explanation.
+
+### Demo Logins
+All demo users use password `Stadium123!`.
+
+- `admin@stadium.local` - admin
+- `operator@stadium.local` - operator
+- `viewer@stadium.local` - viewer
+
+## 5. Assumptions Made
+- **Offline evaluability**: SQLite is used by design. No external database, Firebase, hosted API, or paid service is required for core functionality.
+- **Simulator mode**: `ENABLE_SIMULATOR=true` makes the backend advance live match state and occasionally create events/alerts for demo convenience. Disable it in a real deployment.
+- **Authentication scope**: JWT auth is intentionally minimal for the challenge. It demonstrates role authorization but is not a full identity-management system.
+- **Configured thresholds**: Recommendation triggers are clear named constants tuned for demo operations data, not calibrated limits for a physical venue.
 
 ---
 
-## 5. Setup & Run Instructions
+## 6. Setup & Run Instructions
 
 Ensure Node.js (v20.19+ or v22.12+ is recommended) is installed on the host system.
 
-### Install Dependencies
-Run the following command from the `frontend/` directory to download packages and configure version locks:
+### Backend
+```bash
+cd backend
+npm install
+cp .env.example .env
+npm run seed
+npm run dev
+```
+
+The backend listens on [http://localhost:4000](http://localhost:4000) by default and exposes WebSockets at `ws://localhost:4000/ws`.
+
+### Frontend
 ```bash
 cd frontend
 npm install
-```
-
-### Start Development Server
-To launch the hot-reloading development server locally:
-```bash
+cp .env.example .env
 npm run dev
 ```
+
 Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+Run both backend and frontend in separate terminals for the full real-time application.
 
 ### Optional Gemini AI Configuration
 To demonstrate the natural language briefing summaries:
-1. Copy the example file: `cp .env.example .env`
-2. Open `.env` and assign your Google AI Studio API key to `VITE_GEMINI_API_KEY`.
-3. Restart the development server.
+1. Set `GEMINI_API_KEY` in `backend/.env` for backend-generated recommendation explanations.
+2. `VITE_GEMINI_API_KEY` in `frontend/.env` remains supported for local frontend explanation fallback.
+3. Restart the relevant dev server after changing env vars.
 
-### Execute Test Suite
-To run the Vitest unit, component, and hook tests:
+### Environment Variables
+Backend variables are documented in `backend/.env.example`:
+- `PORT`
+- `DATABASE_FILE`
+- `JWT_SECRET`
+- `JWT_EXPIRES_IN`
+- `FRONTEND_ORIGIN`
+- `GEMINI_API_KEY`
+- `ENABLE_SIMULATOR`
+
+Frontend variables are documented in `frontend/.env.example`:
+- `VITE_GEMINI_API_KEY`
+- `VITE_API_BASE_URL`
+- `VITE_WS_URL`
+
+### Execute Test Suites
 ```bash
+cd backend
+npm run test
+
+cd ../frontend
 npm run test
 ```
 
-To run tests with code coverage metrics:
-```bash
-npx vitest run --coverage
-```
-
 ### Production Compilation
-To compile optimized production assets:
 ```bash
+cd backend
+npm run build
+
+cd ../frontend
 npm run build
 ```
-The compiled files will be output to the `dist/` directory with source maps disabled.
+
+### Security Audit
+```bash
+cd backend
+npm audit
+```
 
 ---
 
-## 6. Tech Stack
-- **Framework**: React 18
+## 7. Tech Stack
+- **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, Framer Motion, Three.js, React Three Fiber, Lucide React
+- **Backend**: Node.js, Express, TypeScript, Zod, Drizzle ORM, SQLite, better-sqlite3, ws, JWT, bcryptjs, pino
 - **Language**: TypeScript
-- **Bundler**: Vite 6.4.3
-- **Test Runner**: Vitest 4.1.10
-- **DOM Test Utilities**: React Testing Library & JSDOM
-- **Styling**: Tailwind CSS 3.4.4 & Framer Motion (reduced motion compliant)
-- **3D Render Engine**: Three.js & React Three Fiber (R3F)
-- **Icon Set**: Lucide React
+- **Testing**: Vitest, React Testing Library, Supertest

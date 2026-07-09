@@ -30,7 +30,8 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
     acceptRecommendation,
     dismissRecommendation,
     geminiApiKey,
-    setGeminiApiKey
+    setGeminiApiKey,
+    isAuthenticated
   } = useOperations()
 
   const [expandedRecId, setExpandedRecId] = useState<string | null>(null)
@@ -59,7 +60,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
       if (!aiExplanations[rec.id]) {
         setLoadingExplanations(prev => ({ ...prev, [rec.id]: true }))
         try {
-          const explanation = await explainWithAI(rec.reasoning, geminiApiKey)
+          const explanation = rec.aiExplanation || await explainWithAI(rec.reasoning, geminiApiKey)
           setAiExplanations(prev => ({ ...prev, [rec.id]: explanation }))
         } catch (err) {
           console.error('Failed to get explanation:', err)
@@ -191,7 +192,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden border-b border-cyan/15 bg-base/30"
+                    className="flex-shrink-0 overflow-hidden border-b border-cyan/15 bg-base/30"
                   >
                     <form onSubmit={handleSaveApiKey} className="p-3 flex flex-col gap-2 font-mono text-[9px]">
                       <div className="flex items-center gap-1.5 text-cyan">
@@ -219,7 +220,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
               </AnimatePresence>
 
               {/* Recommendations Content Area */}
-              <div className="flex-grow overflow-y-auto py-4 flex flex-col gap-3 custom-scrollbar">
+              <div className="flex-1 min-h-0 overflow-y-auto py-4 flex flex-col gap-3 custom-scrollbar">
                 <div className="flex items-center justify-between font-mono text-[9px] text-text-muted px-1">
                   <span>ACTIVE ISSUES: {recommendations.length}</span>
                   {recommendations.length > 0 && (
@@ -298,6 +299,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                                 <button
                                   onClick={() => acceptRecommendation(rec)}
                                   aria-label={`Accept recommendation: ${rec.title}`}
+                                  disabled={!isAuthenticated}
                                   className="flex items-center gap-1 px-2 py-0.5 bg-success/15 hover:bg-success/25 border border-success/45 hover:border-success text-success font-mono text-[8px] font-bold transition-all uppercase tracking-wider"
                                 >
                                   <Check size={8} />
@@ -306,6 +308,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                                 <button
                                   onClick={() => dismissRecommendation(rec)}
                                   aria-label={`Dismiss recommendation: ${rec.title}`}
+                                  disabled={!isAuthenticated}
                                   className="flex items-center gap-1 px-2 py-0.5 bg-base hover:bg-danger/10 border border-cyan/15 hover:border-danger/40 text-text-muted hover:text-danger font-mono text-[8px] transition-all uppercase tracking-wider"
                                 >
                                   <X size={8} />

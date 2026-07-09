@@ -12,7 +12,8 @@ export const Dashboard: React.FC = () => {
     alerts,
     tournament,
     acknowledgeAlert,
-    simulateNewAlert
+    simulateNewAlert,
+    canMutate
   } = useOperations()
 
   return (
@@ -27,8 +28,8 @@ export const Dashboard: React.FC = () => {
       <div className="lg:col-span-1 order-1 md:order-1 lg:order-2">
         <AlertsFeedPanel 
           alerts={alerts}
-          onAddAlert={simulateNewAlert}
-          onAcknowledgeAlert={acknowledgeAlert}
+          onAddAlert={canMutate ? simulateNewAlert : undefined}
+          onAcknowledgeAlert={canMutate ? acknowledgeAlert : undefined}
         />
       </div>
 

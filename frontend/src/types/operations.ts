@@ -27,6 +27,7 @@ export interface Alert {
 }
 
 export interface Tournament {
+  id?: string
   name: string
   stage: string
   completedMatches: number
@@ -71,4 +72,31 @@ export interface MatchEvent {
   type: 'goal' | 'card_yellow' | 'card_red' | 'substitution' | 'timeout'
   detail: string
   timestamp: string // HH:MM:SS
+}
+
+export interface Recommendation {
+  id: string
+  priority: 'critical' | 'high' | 'medium' | 'low'
+  title: string
+  reasoning: string[]
+  suggestedAction: string
+  relatedEntityId: string
+  aiExplanation?: string
+}
+
+export interface DecisionLogEntry {
+  id?: string
+  operator: string
+  action: 'ACCEPTED' | 'DISMISSED'
+  timestamp: string
+  recId: string
+  title: string
+  suggestedAction: string
+}
+
+export interface OperatorProfile {
+  id: string
+  name: string
+  email: string
+  role: 'admin' | 'operator' | 'viewer'
 }
