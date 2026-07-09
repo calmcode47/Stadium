@@ -36,86 +36,83 @@ export const StadiumView: React.FC = () => {
   }, [])
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto pb-12 items-stretch min-h-[500px]">
+    <div className="w-full h-full lg:relative flex flex-col lg:block select-none overflow-y-auto lg:overflow-hidden p-4 lg:p-0 gap-4">
       
-      {/* Left/Main Column: 3D Canvas / 2D Diagram */}
-      <div className="lg:col-span-2 flex flex-col gap-4">
-        
-        {/* Canvas Toolbar Control Panel */}
-        <Panel className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-3">
+      {/* 3D/2D Viewport Container (Takes full parent height/width on desktop, and fixed height on mobile) */}
+      <div className="w-full h-[400px] sm:h-[480px] lg:h-full lg:absolute lg:inset-0 lg:z-0">
+        {isSimplified ? (
+          <StadiumInteractive2D
+            sections={sections}
+            selectedSectionId={selectedSection?.id || null}
+            onSelectSection={setSelectedSection}
+          />
+        ) : (
+          <StadiumInteractive3D
+            sections={sections}
+            selectedSectionId={selectedSection?.id || null}
+            onSelectSection={setSelectedSection}
+            cameraPreset={cameraPreset}
+          />
+        )}
+      </div>
+
+      {/* Floating HUD: Toolbar Control Panel */}
+      <div className="w-full lg:absolute lg:top-4 lg:left-4 lg:w-auto lg:z-10 pointer-events-none">
+        <Panel className="pointer-events-auto bg-surface/85 backdrop-blur-md border border-cyan/25 py-2 px-3 flex flex-wrap items-center gap-3 rounded-none shadow-[0_0_20px_rgba(0,0,0,0.5)]">
           {/* Preset Buttons - Hidden in 2D Simplified Mode */}
           <div className="flex items-center gap-2">
             {!isSimplified ? (
               <>
-                <DataLabel className="mr-1">VIEWPORT PRESETS:</DataLabel>
+                <DataLabel className="mr-1 text-[9px]">PRESETS:</DataLabel>
                 <Button 
                   variant={cameraPreset === 'overview' ? 'primary' : 'secondary'} 
                   onClick={() => setCameraPreset('overview')}
-                  className="py-1 px-2.5 text-[9px] font-mono h-7"
+                  className="py-1 px-2.5 text-[8px] font-mono h-6 flex items-center justify-center"
                 >
                   OVERVIEW
                 </Button>
                 <Button 
                   variant={cameraPreset === 'pitch' ? 'primary' : 'secondary'} 
                   onClick={() => setCameraPreset('pitch')}
-                  className="py-1 px-2.5 text-[9px] font-mono h-7"
+                  className="py-1 px-2.5 text-[8px] font-mono h-6 flex items-center justify-center"
                 >
-                  PITCH LEVEL
+                  PITCH
                 </Button>
                 <Button 
                   variant={cameraPreset === 'north' ? 'primary' : 'secondary'} 
                   onClick={() => setCameraPreset('north')}
-                  className="py-1 px-2.5 text-[9px] font-mono h-7"
+                  className="py-1 px-2.5 text-[8px] font-mono h-6 flex items-center justify-center"
                 >
-                  NORTH STAND
+                  NORTH
                 </Button>
               </>
             ) : (
-              <div className="flex items-center gap-1.5 text-cyan font-mono text-[10px] uppercase">
-                <Map size={12} />
-                <span>2D Vector Blueprint Mode Active</span>
+              <div className="flex items-center gap-1.5 text-cyan font-mono text-[9px] uppercase tracking-wider">
+                <Map size={10} />
+                <span>2D Blueprint Mode</span>
               </div>
             )}
           </div>
 
+          <div className="hidden sm:block w-[1px] h-4 bg-cyan/15 self-stretch" />
+
           {/* 3D/2D Mode Toggle */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => setIsSimplified(prev => !prev)}
-              aria-label="Toggle between 3D visual stadium and accessible 2D vector blueprint"
-              aria-pressed={isSimplified}
-              className="py-1 px-2.5 text-[9px] font-mono h-7 flex items-center gap-1.5"
-            >
-              <Layers size={11} />
-              <span>{isSimplified ? 'ACTIVATE 3D VIEW' : 'ACTIVATE 2D BLUEPRINT'}</span>
-            </Button>
-          </div>
+          <Button
+            variant="secondary"
+            onClick={() => setIsSimplified(prev => !prev)}
+            aria-label="Toggle between 3D visual stadium and accessible 2D vector blueprint"
+            aria-pressed={isSimplified}
+            className="py-1 px-2.5 text-[8px] font-mono h-6 flex items-center gap-1.5 justify-center"
+          >
+            <Layers size={10} />
+            <span>{isSimplified ? '3D VIEW' : '2D VIEW'}</span>
+          </Button>
         </Panel>
-
-        {/* Dynamic Stadium Viewport */}
-        <div className="flex-grow min-h-[380px] lg:min-h-[440px] flex">
-          {isSimplified ? (
-            <StadiumInteractive2D
-              sections={sections}
-              selectedSectionId={selectedSection?.id || null}
-              onSelectSection={setSelectedSection}
-            />
-          ) : (
-            <StadiumInteractive3D
-              sections={sections}
-              selectedSectionId={selectedSection?.id || null}
-              onSelectSection={setSelectedSection}
-              cameraPreset={cameraPreset}
-            />
-          )}
-        </div>
-
       </div>
 
-      {/* Right Column: Seating Sector Details Side Panel */}
-      <div className="lg:col-span-1 flex">
-        <Panel className="w-full flex flex-col justify-between h-full min-h-[380px]">
+      {/* Floating HUD: Seating Sector Details Side Panel */}
+      <div className="w-full lg:absolute lg:right-4 lg:top-4 lg:bottom-4 lg:w-[320px] lg:z-10 pointer-events-none flex">
+        <Panel className="pointer-events-auto w-full bg-surface/85 backdrop-blur-md border border-cyan/25 flex flex-col justify-between h-full p-4 shadow-[0_0_25px_rgba(0,0,0,0.6)]">
           {currentSection ? (
             <div className="flex flex-col gap-5 h-full">
               

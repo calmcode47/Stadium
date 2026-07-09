@@ -18,7 +18,7 @@ export const AppShell: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-control-room text-primary relative flex flex-col overflow-x-hidden">
+    <div className="min-h-screen md:h-screen bg-control-room text-primary relative flex flex-col md:overflow-hidden">
       {/* Skip Link for Keyboard Accessibility */}
       <a 
         href="#main-content" 
@@ -32,7 +32,7 @@ export const AppShell: React.FC = () => {
 
       {/* Main Panel Content Area */}
       <div 
-        className={`flex-grow flex flex-col md:pl-64 pb-16 md:pb-0 min-h-screen transition-all duration-200 ${
+        className={`flex-grow flex flex-col md:pl-64 pb-16 md:pb-0 min-h-screen md:h-screen md:overflow-hidden transition-all duration-200 ${
           isAssistantOpen ? 'md:pr-[380px]' : 'md:pr-12'
         }`}
       >
@@ -40,7 +40,12 @@ export const AppShell: React.FC = () => {
         <TopBar />
 
         {/* Dynamic Route Content */}
-        <main id="main-content" className="flex-grow p-4 md:p-8 overflow-y-auto">
+        <main 
+          id="main-content" 
+          className={`flex-grow flex flex-col min-h-0 transition-all duration-200 ${
+            location.pathname === '/stadium' ? 'p-0 overflow-hidden' : 'p-4 md:p-8 overflow-y-auto'
+          }`}
+        >
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={location.pathname}
@@ -48,7 +53,7 @@ export const AppShell: React.FC = () => {
               animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
               exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
               transition={{ duration: shouldReduceMotion ? 0 : 0.18, ease: 'easeOut' }}
-              className="w-full h-full"
+              className="w-full flex-grow flex flex-col min-h-0"
             >
               <Outlet />
             </motion.div>
