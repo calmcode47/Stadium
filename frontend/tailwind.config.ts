@@ -20,7 +20,7 @@ export default {
           score: '#FFB020',
         },
         success: '#2ECC71',
-        danger: '#FF4757',
+        danger: '#FF5A6B',
         'text-primary': '#E8EDF2',
         'text-muted': '#8B98A5',
       },

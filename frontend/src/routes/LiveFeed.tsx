@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Radio, LayoutGrid, AlertTriangle } from 'lucide-react'
-import { useLiveMatchSimulator } from '@/hooks/useLiveMatchSimulator'
+import { useOperations } from '@/hooks/useOperations'
 import Panel from '@/components/design-system/Panel'
 import DataLabel from '@/components/design-system/DataLabel'
 import Button from '@/components/design-system/Button'
@@ -14,7 +14,7 @@ export const LiveFeed: React.FC = () => {
   const navigate = useNavigate()
 
   // Consume simulation hook for live clocks, scores, and event updates
-  const { matches, events } = useLiveMatchSimulator()
+  const { matches, events } = useOperations()
 
   const [activeMode, setActiveMode] = useState<'single' | 'ticker'>('single')
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)

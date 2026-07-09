@@ -74,6 +74,7 @@ export const AlertsFeedPanel: React.FC<AlertsFeedPanelProps> = ({
               return (
                 <motion.div
                   key={alert.id}
+                  aria-live={alert.level === 'critical' ? 'assertive' : 'polite'}
                   initial={shouldReduceMotion ? { opacity: 0 } : { 
                     opacity: 0, 
                     y: -10, 

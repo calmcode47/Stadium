@@ -31,6 +31,7 @@ export const ScoreDigit: React.FC<ScoreDigitProps> = ({
   return (
     <motion.span
       key={value}
+      aria-live="polite"
       initial={shouldReduceMotion ? { opacity: 1 } : { 
         opacity: 0.6,
         textShadow: `0 0 20px ${glowColors[colorVariant]}`,

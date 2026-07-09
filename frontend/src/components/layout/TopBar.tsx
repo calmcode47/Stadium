@@ -46,9 +46,9 @@ export const TopBar: React.FC = () => {
       
       {/* View Title */}
       <div className="flex items-center gap-3">
-        <h2 className="text-xl md:text-2xl font-display uppercase tracking-wider text-text-primary">
+        <h1 className="text-xl md:text-2xl font-display uppercase tracking-wider text-text-primary">
           {getPageTitle(location.pathname)}
-        </h2>
+        </h1>
       </div>
 
       {/* Clock and Selector */}

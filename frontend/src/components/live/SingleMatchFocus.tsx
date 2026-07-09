@@ -123,6 +123,7 @@ export const SingleMatchFocus: React.FC<SingleMatchFocusProps> = ({ match, event
                 return (
                   <motion.div
                     key={event.id}
+                    aria-live={event.type === 'goal' || event.type === 'card_red' ? 'assertive' : 'polite'}
                     initial={isNewestEvent ? (shouldReduceMotion ? { opacity: 0 } : { 
                       opacity: 0, 
                       y: -10, 

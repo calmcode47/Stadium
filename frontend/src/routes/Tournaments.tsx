@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Trophy, CalendarRange, FilterX } from 'lucide-react'
-import { mockRounds } from '@/mocks/operationsData'
+import { useOperations } from '@/hooks/useOperations'
 import type { Round } from '@/types/operations'
 import Panel from '@/components/design-system/Panel'
 import DataLabel from '@/components/design-system/DataLabel'
@@ -10,6 +10,7 @@ import BracketView from '@/components/tournaments/BracketView'
 import ScheduleView from '@/components/tournaments/ScheduleView'
 
 export const Tournaments: React.FC = () => {
+  const { rounds } = useOperations()
   const [activeTab, setActiveTab] = useState<'bracket' | 'schedule'>('bracket')
   const [selectedRound, setSelectedRound] = useState<'all' | '1' | '2' | '3'>('all')
   const [selectedVenue, setSelectedVenue] = useState<'all' | 'main' | 'east' | 'west'>('all')
@@ -28,7 +29,7 @@ export const Tournaments: React.FC = () => {
 
   // Apply filtering logic to rounds and matches
   const getFilteredRounds = (): Round[] => {
-    return mockRounds
+    return rounds
       .map(round => {
         // 1. Filter by Round ID
         if (selectedRound !== 'all' && round.id !== parseInt(selectedRound)) {
