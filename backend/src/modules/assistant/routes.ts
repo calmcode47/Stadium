@@ -7,7 +7,7 @@ import { decisionLogEntries, operators } from '../../db/schema'
 import { explainWithAI, generateRecommendations } from '../../lib/assistantEngine'
 import { createId, isoNow, timeOfDay } from '../../lib/ids'
 import { badRequest, notFound } from '../../lib/httpErrors'
-import { paginationSchema, validate } from '../../lib/validation'
+import { getValidatedQuery, paginationSchema, validate } from '../../lib/validation'
 import { requireAuth, type AuthenticatedRequest } from '../../middleware/auth'
 import { getOperationsState } from '../operationsService'
 import { broadcast } from '../../realtime/broadcaster'
@@ -82,7 +82,7 @@ router.post('/recommendations/:id/decision', requireAuth, validate('params', par
 })
 
 router.get('/decision-log', requireAuth, validate('query', paginationSchema), (req, res) => {
-  const query = req.query as unknown as z.infer<typeof paginationSchema>
+  const query = getValidatedQuery<z.infer<typeof paginationSchema>>(req)
   const operatorRows = getDatabase().db.select().from(operators).all()
   const names = new Map(operatorRows.map(operator => [operator.id, operator.name]))
   const rows = getDatabase().db

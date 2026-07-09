@@ -5,13 +5,13 @@ import { getDatabase } from '../../db/client'
 import { mapRounds, mapTournamentSummary } from '../../db/mappers'
 import { matches, rounds, tournaments, venues } from '../../db/schema'
 import { notFound } from '../../lib/httpErrors'
-import { paginationSchema, validate } from '../../lib/validation'
+import { getValidatedQuery, paginationSchema, validate } from '../../lib/validation'
 
 const router = Router()
 const paramsSchema = z.object({ id: z.string().min(1) })
 
 router.get('/', validate('query', paginationSchema), (req, res) => {
-  const query = req.query as unknown as z.infer<typeof paginationSchema>
+  const query = getValidatedQuery<z.infer<typeof paginationSchema>>(req)
   const tournamentRows = getDatabase().db.select().from(tournaments).all().slice(query.offset, query.offset + query.limit)
   const matchRows = getDatabase().db.select().from(matches).all()
   res.json({ data: tournamentRows.map(row => mapTournamentSummary(row, matchRows.filter(match => match.tournamentId === row.id && match.roundId !== null))) })

@@ -6,7 +6,7 @@ import { mapAlert } from '../../db/mappers'
 import { alerts } from '../../db/schema'
 import { createId, isoNow } from '../../lib/ids'
 import { notFound } from '../../lib/httpErrors'
-import { paginationSchema, validate } from '../../lib/validation'
+import { getValidatedQuery, paginationSchema, validate } from '../../lib/validation'
 import { requireAuth, requireRole } from '../../middleware/auth'
 import { broadcast } from '../../realtime/broadcaster'
 
@@ -24,7 +24,7 @@ const createSchema = z.object({
 })
 
 router.get('/', validate('query', listSchema), (req, res) => {
-  const query = req.query as unknown as z.infer<typeof listSchema>
+  const query = getValidatedQuery<z.infer<typeof listSchema>>(req)
   const rows = getDatabase().db.select().from(alerts).all()
   const filtered = rows
     .filter(row => (query.acknowledged === undefined ? true : row.acknowledged === query.acknowledged))

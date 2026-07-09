@@ -6,7 +6,7 @@ import { mapStandSection, mapVenueZone } from '../../db/mappers'
 import { venues } from '../../db/schema'
 import { isoNow } from '../../lib/ids'
 import { notFound } from '../../lib/httpErrors'
-import { paginationSchema, validate } from '../../lib/validation'
+import { getValidatedQuery, paginationSchema, validate } from '../../lib/validation'
 import { requireAuth, requireRole } from '../../middleware/auth'
 import { broadcast } from '../../realtime/broadcaster'
 
@@ -17,7 +17,7 @@ const occupancySchema = z.object({ occupancy: z.number().int().min(0) })
 const gateLockSchema = z.object({ gateLocked: z.boolean().optional(), locked: z.boolean().optional() })
 
 router.get('/', validate('query', listSchema), (req, res) => {
-  const query = req.query as unknown as z.infer<typeof listSchema>
+  const query = getValidatedQuery<z.infer<typeof listSchema>>(req)
   const rows = getDatabase().db.select().from(venues).all().filter(row => (query.kind ? row.kind === query.kind : true))
   const page = rows.slice(query.offset, query.offset + query.limit)
   res.json({
