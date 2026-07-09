@@ -11,11 +11,12 @@ The **Smart Stadium & Tournament Operations** platform is a high-density, real-t
 Built using a modern reactive stack, the application prioritizes scanability, rapid data intake, and visual feedback over decorative elements.
 
 ### Technical Stack Summary
-- **Core Framework:** React 18 + TypeScript + Vite
-- **Styling:** Tailwind CSS (Vanilla CSS global controls)
-- **State & Simulation:** React Hooks + Zustand + WebGL Concurrency Checks
-- **Motion & Transitions:** Framer Motion (Optimized for OS-level reduced motion preferences)
-- **3D Graphics Engine:** React Three Fiber (R3F) + Three.js + Drei (Procedural geometry, instanced meshes)
+- **Frontend Core:** React 18 + TypeScript + Vite
+- **Backend Core:** Node.js + Express + TypeScript + Drizzle ORM + SQLite
+- **Real-Time Data Sync:** Native WebSockets (`ws` server + client subscriptions)
+- **Security & Authorization:** JWT (JSON Web Tokens), bcryptjs password hashing, Helmet security headers, rate-limiting
+- **Styling:** Tailwind CSS + Vanilla CSS custom classes
+- **3D Graphics Engine:** React Three Fiber (R3F) + Three.js + Drei (procedural graphics and meshes)
 - **Routing:** React Router v6
 
 ---
@@ -89,16 +90,36 @@ Built using a modern reactive stack, the application prioritizes scanability, ra
 - **Operator Command Drawer (`src/components/assistant/AssistantPanel.tsx`):** A collapsible right sidebar container presenting recommendations sorted by priority. Includes details on reasoning trails, Gemini key caching, and action buttons to Accept or Dismiss recommendations.
 - **Audit Trail Console (`src/components/assistant/DecisionLog.tsx`):** Built a session log widget showing an operator audit log of all accepted and dismissed dispatches.
 
+### Phase 9 — Full-Stack Integration & Role-Based Access Control
+- **RESTful API Service (`backend/src/`):** Established an Express application serving JSON APIs for matches, alerts, tournaments, and operations assistant commands.
+- **Relational Drizzle SQLite Storage (`backend/src/db/`):** Wired a local SQLite database (`stadium.db`) managed via Drizzle ORM to house persistent states (zones, stand lock statuses, match timelines, active dispatches). Configured a seeding script to populate initial mock structures.
+- **Secure Authentication & RBAC Middleware:** Integrated JWT sessions alongside hashed passwords (via `bcryptjs`). Implemented route-guarding middleware to restrict mutating requests (such as gate toggle, incident clearing, alert generation, and recommendation dispatches) to users possessing `admin` or `operator` privileges.
+- **WebSocket Broadcast Core (`backend/src/realtime/`):** Implemented a native WebSocket server that receives event dispatches and broadcasts mutations (e.g. `match:updated`, `venue:updated`, `alert:created`) to all connected frontend screens in real time.
+- **Client Synchronization (`frontend/src/lib/`):** Wired the frontend to connect to the REST APIs and persistent WebSocket channels (`apiClient.ts` and `wsClient.ts`), automatically falling back to client-side simulated data if the backend server becomes unreachable.
+
 ---
 
 ## 3. Project Structure
 
-Reorganized the repository by placing all frontend development, mock, and configuration elements into a dedicated `/frontend` folder:
+The project has been separated into clean front-end and back-end modules to support full-stack local operation:
 
 ```
 Stadium/
-├── .git/                      # Local Git Repository configuration
-└── frontend/                  # React Frontend Project Folder
+├── PROJECT_STATUS_REPORT.md   # Architectural status and phase logs
+├── README.md                  # Unified run instructions and configurations
+├── backend/                   # Node.js + Express Backend Server
+│   ├── src/
+│   │   ├── config/            # Environment variable configurations
+│   │   ├── db/                # Drizzle schemas, DB client, and seed scripts
+│   │   ├── middleware/        # JWT auth validation, rate-limiter, error handlers
+│   │   ├── modules/           # REST controllers (auth, alerts, matches, assistant)
+│   │   ├── realtime/          # WS broadcasters and telemetry simulator threads
+│   │   ├── app.ts             # Express application structure
+│   │   └── server.ts          # Server initialization entry point
+│   ├── tests/                 # Vitest Integration tests
+│   ├── package.json           # Server dependencies and scripts
+│   └── tsconfig.json          # TypeScript configurations
+└── frontend/                  # React Frontend App
     ├── public/                # Static assets (favicons, svgs)
     ├── src/
     │   ├── assets/            # App media/images
@@ -110,8 +131,8 @@ Stadium/
     │   │   ├── live/          # Scoreboard Focus, Wall Tickers
     │   │   ├── stadium/       # 3D Canvas, 2D Blueprints
     │   │   └── tournaments/   # Bracket Trees, Agendas
-    │   ├── hooks/             # useLiveMatchSimulator hook
-    │   ├── lib/               # Deterministic decision engine and test suite
+    │   ├── hooks/             # useLiveMatchSimulator hooks and context providers
+    │   ├── lib/               # API clients, WS connectors, and client-side decision engine
     │   ├── mocks/             # operationsData mock data
     │   ├── routes/            # Main Route page containers
     │   ├── styles/            # globals.css Tailwind stylesheet
@@ -120,7 +141,7 @@ Stadium/
     │   └── main.tsx           # Entry point
     ├── package.json           # Scripts and dependencies definitions
     ├── tailwind.config.ts     # Theme colors, display fonts
-    ├── vite.config.ts         # Vite bundler configurations
+    ├── vite.config.ts         # Vite configurations
     └── tsconfig.json          # TypeScript configurations
 ```
 
@@ -128,17 +149,35 @@ Stadium/
 
 ## 4. Run & Development Instructions
 
-### Local Development
-To run the developer server locally:
+Both servers should run simultaneously to enable the live backend and WebSockets integration.
+
+### 1. Running the Backend Server
+Navigate to the `backend/` directory, install packages, seed the database, and start the development watcher:
+```bash
+cd backend
+npm install
+npm run seed
+npm run dev
+```
+The backend server runs at `http://localhost:4000/api` with WebSockets available at `ws://localhost:4000/ws`.
+
+### 2. Running the Frontend Server
+Navigate to the `frontend/` directory, install packages, and boot Vite:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+Open `http://localhost:5174/` or `http://localhost:5173/` in your browser.
 
-### Production Build
-To test the production compilation and bundle size:
+### 3. Production Compilation
+To compile optimized production assets:
 ```bash
+# Backend compilation
+cd backend
+npm run build
+
+# Frontend compilation
 cd frontend
 npm run build
 ```
@@ -149,6 +188,7 @@ Successful build logs:
 ---
 
 ## 5. Next Steps & Integration Goals
-1. **API Integration:** Swap the mock data simulation hook (`useLiveMatchSimulator`) with a real WebSocket client (e.g., Socket.io or native WebSockets) connected to the Live Venue scoring engine.
-2. **Database Binding:** Connect gate occupancy and section incidents to database endpoints (e.g., PostgreSQL or Firestore) to receive real telemetry.
-3. **Role Authentication:** Add user authentication (e.g., Firebase Auth) to lock down sector controls (gate toggles, security dispatches) for authorized venue operators only.
+1. **Containerization:** Containerize both the Express API and the Vite React app using Docker-compose to simplify staging and cloud orchestration.
+2. **External Data Adapters:** Replace the backend's internal simulator thread with live data ingress adapters that hook into actual ticket tourniquets and venue camera stream event systems.
+3. **API Key Vaulting:** Move the Gemini API key caching configuration from local browser localStorage into a secure server-side secrets vault (e.g., Vault or AWS Secrets Manager) accessed via backend endpoints.
+
