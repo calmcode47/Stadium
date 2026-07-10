@@ -17,6 +17,7 @@
  */
 
 import type { Alert, Match, OperationsState, Recommendation, Round, StandSection, VenueZone } from '../types/operations'
+import { getGeminiGenerateUrl } from '../config/gemini.js'
 
 // 85% occupancy is the point where egress queues become operationally sensitive before final whistle.
 export const GATE_CONGESTION_RATIO = 0.85
@@ -218,25 +219,25 @@ export const explainWithAI = async (recommendation: Recommendation, apiKey?: str
   if (!apiKey) return templateExplanation(recommendation.reasoning)
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: `Write one professional sentence under 18 words explaining this stadium operations recommendation:\n${recommendation.reasoning.map(reason => `- ${reason}`).join('\n')}`
-                }
-              ]
-            }
-          ],
-          generationConfig: { maxOutputTokens: 60, temperature: 0.15 }
-        })
-      }
-    )
+    const response = await fetch(getGeminiGenerateUrl(), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey.trim()
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: `Write one professional sentence under 18 words explaining this stadium operations recommendation:\n${recommendation.reasoning.map(reason => `- ${reason}`).join('\n')}`
+              }
+            ]
+          }
+        ],
+        generationConfig: { maxOutputTokens: 60, temperature: 0.15 }
+      })
+    })
 
     if (!response.ok) return templateExplanation(recommendation.reasoning)
     const data = (await response.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }

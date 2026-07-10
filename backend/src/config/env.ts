@@ -11,6 +11,7 @@ const schema = z.object({
   JWT_EXPIRES_IN: z.string().min(1).default('1h'),
   FRONTEND_ORIGIN: z.string().url().default('http://localhost:5173'),
   GEMINI_API_KEY: z.string().optional().default(''),
+  GEMINI_MODEL: z.string().optional().default(''),
   ENABLE_SIMULATOR: z
     .string()
     .optional()

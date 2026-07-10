@@ -48,6 +48,7 @@ interface OperationsContextType {
   authError: string | null
   canMutate: boolean
   setGeminiApiKey: (key: string) => void
+  clearGeminiApiKey: () => void
   login: (email: string, password: string) => Promise<void>
   logout: () => void
   acceptRecommendation: (rec: Recommendation) => void
@@ -59,6 +60,19 @@ interface OperationsContextType {
 }
 
 const OperationsContext = createContext<OperationsContextType | undefined>(undefined)
+
+const GEMINI_KEY_STORAGE = 'GEMINI_API_KEY'
+const GEMINI_KEY_SOURCE_STORAGE = 'GEMINI_API_KEY_SOURCE'
+
+const resolveGeminiApiKey = (): string => {
+  const envKey = (import.meta.env.VITE_GEMINI_API_KEY || '').trim()
+  const storedKey = (localStorage.getItem(GEMINI_KEY_STORAGE) || '').trim()
+  const source = localStorage.getItem(GEMINI_KEY_SOURCE_STORAGE)
+
+  // Use the browser-saved key only when the user explicitly saved one in Settings.
+  if (source === 'user' && storedKey) return storedKey
+  return envKey || storedKey
+}
 
 export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [matches, setMatches] = useState<Match[]>(mockMatches)
@@ -75,15 +89,21 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [error, setError] = useState<string | null>(null)
   const [operator, setOperator] = useState<OperatorProfile | null>(() => getStoredOperator())
   const [authError, setAuthError] = useState<string | null>(null)
-  const [geminiApiKey, setGeminiApiKeyState] = useState<string>(() => {
-    return localStorage.getItem('GEMINI_API_KEY') || import.meta.env.VITE_GEMINI_API_KEY || ''
-  })
+  const [geminiApiKey, setGeminiApiKeyState] = useState<string>(resolveGeminiApiKey)
 
   const canMutate = operator?.role === 'admin' || operator?.role === 'operator'
 
   const setGeminiApiKey = (key: string) => {
-    setGeminiApiKeyState(key)
-    localStorage.setItem('GEMINI_API_KEY', key)
+    const trimmed = key.trim()
+    setGeminiApiKeyState(trimmed)
+    localStorage.setItem(GEMINI_KEY_STORAGE, trimmed)
+    localStorage.setItem(GEMINI_KEY_SOURCE_STORAGE, 'user')
+  }
+
+  const clearGeminiApiKey = () => {
+    localStorage.removeItem(GEMINI_KEY_STORAGE)
+    localStorage.removeItem(GEMINI_KEY_SOURCE_STORAGE)
+    setGeminiApiKeyState(resolveGeminiApiKey())
   }
 
   const refreshRecommendations = useCallback(async () => {
@@ -299,6 +319,7 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         authError,
         canMutate,
         setGeminiApiKey,
+        clearGeminiApiKey,
         login,
         logout,
         acceptRecommendation,

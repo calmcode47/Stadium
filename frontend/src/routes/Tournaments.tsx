@@ -65,7 +65,7 @@ export const Tournaments: React.FC = () => {
       {/* 1. Header Navigation Tabs Panel */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-cyan/20 pb-4 gap-4">
         {/* Tabs switcher */}
-        <div className="flex items-center gap-2 bg-surface/50 border border-cyan/15 p-1 rounded-[2px] self-start">
+        <div className="flex items-center gap-1 sm:gap-2 bg-surface/50 border border-cyan/15 p-1 rounded-[2px] self-start flex-wrap">
           <button
             onClick={() => setActiveTab('bracket')}
             className={`flex items-center gap-2 px-3 py-1.5 font-mono text-xs tracking-wider uppercase transition-colors duration-100 rounded-[2px] ${
@@ -75,7 +75,8 @@ export const Tournaments: React.FC = () => {
             }`}
           >
             <Trophy size={13} />
-            <span>BRACKET MONITOR</span>
+            <span className="hidden sm:inline">BRACKET MONITOR</span>
+            <span className="sm:hidden">BRACKET</span>
           </button>
           <button
             onClick={() => setActiveTab('schedule')}
@@ -86,7 +87,8 @@ export const Tournaments: React.FC = () => {
             }`}
           >
             <CalendarRange size={13} />
-            <span>CHRONOLOGICAL RUN-SHEET</span>
+            <span className="hidden sm:inline">CHRONOLOGICAL RUN-SHEET</span>
+            <span className="sm:hidden">SCHEDULE</span>
           </button>
         </div>
 
@@ -100,7 +102,7 @@ export const Tournaments: React.FC = () => {
       <Panel className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 py-3 bg-surface/30">
         
         {/* Round quick-filter buttons */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <DataLabel className="mr-1">ROUND MATRIX:</DataLabel>
           <Button
             variant={selectedRound === 'all' ? 'primary' : 'secondary'}

@@ -6,6 +6,7 @@ import {
   evaluateTournamentBottleneck,
   generateRecommendations,
   explainWithAI,
+  chatWithAI,
   type OperationsState
 } from './assistantEngine'
 import type { Match, VenueZone, Alert, StandSection } from '../types/operations'
@@ -321,8 +322,13 @@ describe('explainWithAI', () => {
     const result = await explainWithAI(reasoning, 'TEST_API_KEY')
     expect(result).toBe('AI explanation text')
     expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining('TEST_API_KEY'),
-      expect.objectContaining({ method: 'POST' })
+      expect.stringContaining('generativelanguage.googleapis.com'),
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'x-goog-api-key': 'TEST_API_KEY'
+        })
+      })
     )
 
     vi.unstubAllGlobals()
@@ -339,3 +345,65 @@ describe('explainWithAI', () => {
     vi.unstubAllGlobals()
   })
 })
+
+describe('chatWithAI', () => {
+  const dummyState: OperationsState = {
+    matches: [],
+    zones: [],
+    alerts: [],
+    tournament: { name: 'Cup', stage: 'Finals', completedMatches: 2, totalMatches: 4 },
+    rounds: [],
+    sections: []
+  }
+
+  it('throws an error if API key is missing', async () => {
+    await expect(chatWithAI('Hello', [], dummyState, '')).rejects.toThrow('API key is required for AI chat')
+  })
+
+  it('correctly constructs payload and resolves response text on success', async () => {
+    const mockResponse = {
+      candidates: [
+        {
+          content: {
+            parts: [{ text: 'Stadium operations are fully nominal. No action required.' }]
+          }
+        }
+      ]
+    }
+
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockResponse
+    })
+    vi.stubGlobal('fetch', fetchSpy)
+
+    const response = await chatWithAI('Status report please', [], dummyState, 'TEST_KEY')
+    expect(response).toBe('Stadium operations are fully nominal. No action required.')
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('generativelanguage.googleapis.com'),
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'x-goog-api-key': 'TEST_KEY'
+        }),
+        body: expect.stringContaining('Status report please')
+      })
+    )
+
+    vi.unstubAllGlobals()
+  })
+
+  it('throws when the API request fails', async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      text: async () => 'Internal Error'
+    })
+    vi.stubGlobal('fetch', fetchSpy)
+
+    await expect(chatWithAI('Hello', [], dummyState, 'TEST_KEY')).rejects.toThrow('API error: 500 - Internal Error')
+
+    vi.unstubAllGlobals()
+  })
+})
+

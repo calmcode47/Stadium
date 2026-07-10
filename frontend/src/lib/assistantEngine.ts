@@ -17,6 +17,15 @@
  */
 
 import type { Match, VenueZone, Alert, Tournament, StandSection, Round } from '../types/operations'
+import {
+  formatGeminiError,
+  GEMINI_GENERATE_URL,
+  GEMINI_MAX_CHAT_HISTORY,
+  GEMINI_MAX_RETRIES,
+  GEMINI_MIN_REQUEST_INTERVAL_MS,
+  parseGeminiRetryDelayMs,
+  waitForGeminiRateLimit
+} from './geminiConfig'
 
 export interface Recommendation {
   id: string
@@ -297,33 +306,24 @@ export async function explainWithAI(reasoning: string[], apiKey?: string): Promi
   }
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          contents: [
+    const response = await callGemini(apiKey, {
+      contents: [
+        {
+          parts: [
             {
-              parts: [
-                {
-                  text: `Synthesize the following stadium operational events into a single, cohesive, plain-language operator summary sentence.
+              text: `Synthesize the following stadium operational events into a single, cohesive, plain-language operator summary sentence.
 Format: Write a single, brief sentence (max 18 words) explaining what is happening. Keep it professional.
 Events to summarize:
 ${reasoning.map(r => `- ${r}`).join('\n')}`
-                }
-              ]
             }
-          ],
-          generationConfig: {
-            maxOutputTokens: 60,
-            temperature: 0.15
-          }
-        })
+          ]
+        }
+      ],
+      generationConfig: {
+        maxOutputTokens: 60,
+        temperature: 0.15
       }
-    )
+    })
 
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`)
@@ -338,3 +338,137 @@ ${reasoning.map(r => `- ${r}`).join('\n')}`
     return `Local briefing: ${joined}.`
   }
 }
+
+export interface ChatMessage {
+  role: 'user' | 'model'
+  text: string
+}
+
+async function callGemini(apiKey: string, body: Record<string, unknown>): Promise<Response> {
+  await waitForGeminiRateLimit()
+
+  let attempt = 0
+  while (attempt <= GEMINI_MAX_RETRIES) {
+    const response = await fetch(GEMINI_GENERATE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey.trim()
+      },
+      body: JSON.stringify(body)
+    })
+
+    if (response.status !== 429 || attempt === GEMINI_MAX_RETRIES) {
+      return response
+    }
+
+    const errorText = await response.text()
+    const retryDelayMs = parseGeminiRetryDelayMs(errorText) ?? GEMINI_MIN_REQUEST_INTERVAL_MS
+    await new Promise(resolve => setTimeout(resolve, retryDelayMs))
+    attempt += 1
+  }
+
+  throw new Error('Gemini request failed after retries')
+}
+
+export async function chatWithAI(
+  message: string,
+  history: ChatMessage[],
+  state: OperationsState,
+  apiKey: string
+): Promise<string> {
+  if (!apiKey) {
+    throw new Error('API key is required for AI chat')
+  }
+
+  // Construct a concise summary of the current live operations state
+  const liveMatches = state.matches
+    .map(m => `- Match: ${m.teamHome} vs ${m.teamAway} (${m.scoreHome}-${m.scoreAway}), elapsed: ${m.timeElapsed} mins, status: ${m.statusLabel} (isLive: ${m.isLive})`)
+    .join('\n')
+
+  const zoneOccupancies = state.zones
+    .map(z => `- Zone: ${z.name}, occupancy: ${z.occupancy}/${z.maxCapacity} (${Math.round((z.occupancy / z.maxCapacity) * 100)}%), status: ${z.statusLabel}`)
+    .join('\n')
+
+  const standSections = state.sections
+    .map(s => `- Section: ${s.name}, gates: ${s.gateStatus.toUpperCase()}, incidents: ${s.incidents}, occupancy: ${s.occupancy}/${s.maxCapacity}`)
+    .join('\n')
+
+  const activeAlerts = state.alerts
+    .filter(a => !a.isAcknowledged)
+    .map(a => `- Alert [${a.level.toUpperCase()}] at ${a.timestamp}: ${a.message}`)
+    .join('\n')
+
+  const currentRecs = generateRecommendations(state)
+  const recommendationsStr = currentRecs
+    .map(r => `- [${r.priority.toUpperCase()}] ${r.title}: ${r.suggestedAction} (Reasoning: ${r.reasoning.join(', ')})`)
+    .join('\n')
+
+  const systemInstruction = `You are the AI Assistant for the Smart Stadium & Tournament Operations control room.
+Your role is to help the operations manager/operator monitor the stadium state, coordinate actions, resolve bottlenecks, and manage events.
+Answer concisely, in a professional and direct tone (avoid overly flowery language). Use bullet points and numbers where helpful.
+
+Here is the current live telemetry operations state:
+
+[LIVE MATCHES]
+${liveMatches || 'No matches listed.'}
+
+[STADIUM ZONE OCCUPANCY]
+${zoneOccupancies || 'No zone data.'}
+
+[STAND SECTIONS]
+${standSections || 'No section data.'}
+
+[UNACKNOWLEDGED ALERTS]
+${activeAlerts || 'All alerts are acknowledged/clear.'}
+
+[CURRENT DECISION RECOMMENDATIONS]
+${recommendationsStr || 'No active recommendations/anomalies detected.'}
+
+If asked about matches, zones, gate status, or incidents, use the real-time telemetry above to answer. Support the operator with clear decision reasoning. Keep answers under 100 words where possible.`
+
+  // Prepare standard Gemini API chat format (trim history to conserve quota)
+  const recentHistory = history.slice(-GEMINI_MAX_CHAT_HISTORY)
+  const contents = [
+    ...recentHistory.map(msg => ({
+      role: msg.role,
+      parts: [{ text: msg.text }]
+    })),
+    {
+      role: 'user',
+      parts: [{ text: message }]
+    }
+  ]
+
+  try {
+    const response = await callGemini(apiKey, {
+      contents,
+      systemInstruction: {
+        parts: [{ text: systemInstruction }]
+      },
+      generationConfig: {
+        maxOutputTokens: 400,
+        temperature: 0.25
+      }
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Gemini API Error Response:', errorText)
+      let parsedError = errorText
+      try {
+        const parsed = JSON.parse(errorText)
+        parsedError = parsed.error?.message || errorText
+      } catch {}
+      throw new Error(formatGeminiError(response.status, parsedError))
+    }
+
+    const data = await response.json()
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
+    return text || "No response received from the operations engine."
+  } catch (error) {
+    console.error('Gemini chat request failed:', error)
+    throw error
+  }
+}
+

@@ -132,10 +132,14 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 Run both backend and frontend in separate terminals for the full real-time application.
 
 ### Optional Gemini AI Configuration
-To demonstrate the natural language briefing summaries:
+The assistant uses **Gemini Flash-Lite** by default (`gemini-3.1-flash-lite-preview`) because it offers significantly higher free-tier daily request limits than `gemini-2.5-flash`, while remaining fast enough for operational chat and briefing summaries. The client also paces requests (~15 per minute) and retries once on rate-limit responses.
+
+To enable natural language briefings and chat:
 1. Set `GEMINI_API_KEY` in `backend/.env` for backend-generated recommendation explanations.
-2. `VITE_GEMINI_API_KEY` in `frontend/.env` remains supported for local frontend explanation fallback.
-3. Restart the relevant dev server after changing env vars.
+2. Set `VITE_GEMINI_API_KEY` in `frontend/.env` for the in-browser assistant chat panel.
+3. Optionally override the model with `GEMINI_MODEL` / `VITE_GEMINI_MODEL` if your Google AI Studio project has access to a different model.
+4. Restart the relevant dev server after changing env vars.
+5. In the Assistant panel, click **RESET** under Settings if a stale browser-saved key overrides your `.env` key.
 
 ### Environment Variables
 Backend variables are documented in `backend/.env.example`:
@@ -145,10 +149,12 @@ Backend variables are documented in `backend/.env.example`:
 - `JWT_EXPIRES_IN`
 - `FRONTEND_ORIGIN`
 - `GEMINI_API_KEY`
+- `GEMINI_MODEL`
 - `ENABLE_SIMULATOR`
 
 Frontend variables are documented in `frontend/.env.example`:
 - `VITE_GEMINI_API_KEY`
+- `VITE_GEMINI_MODEL`
 - `VITE_API_BASE_URL`
 - `VITE_WS_URL`
 
@@ -183,3 +189,16 @@ npm audit
 - **Backend**: Node.js, Express, TypeScript, Zod, Drizzle ORM, SQLite, better-sqlite3, ws, JWT, bcryptjs, pino
 - **Language**: TypeScript
 - **Testing**: Vitest, React Testing Library, Supertest
+
+---
+
+## 8. Submission Checklist (Challenge Rules)
+Before submitting, verify these repository requirements:
+
+| Rule | Status | Notes |
+| --- | --- | --- |
+| Public GitHub repository | **Action required** | Remote is currently **private**. Set the repo to public before submission. |
+| Repository size under 10 MB | Pass | Tracked source is under 1 MB (`node_modules` and `.env` are gitignored). |
+| Single branch only | Pass | `main` is the only branch. |
+| Complete README | Pass | Vertical, approach, setup, assumptions, and architecture are documented above. |
+| Tests included | Pass | Run `npm run test` in both `backend/` and `frontend/`. |

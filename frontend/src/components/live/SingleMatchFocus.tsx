@@ -53,12 +53,12 @@ export const SingleMatchFocus: React.FC<SingleMatchFocusProps> = ({ match, event
           </div>
 
           {/* Scores Display */}
-          <div className="flex items-center justify-center gap-6 select-none bg-base/60 border border-cyan/15 p-4 rounded-[2px] shadow-[0_0_20px_rgba(0,0,0,0.4)]">
-            <div style={{ fontSize: '4.5rem' }}>
+          <div className="flex items-center justify-center gap-3 sm:gap-6 select-none bg-base/60 border border-cyan/15 p-3 sm:p-4 rounded-[2px] shadow-[0_0_20px_rgba(0,0,0,0.4)]">
+            <div className="text-4xl sm:text-5xl md:text-[4.5rem]">
               <ScoreDigit value={match.scoreHome} colorVariant={isLive ? 'cyan' : 'primary'} />
             </div>
-            <span className="font-display text-4xl text-text-muted self-center">:</span>
-            <div style={{ fontSize: '4.5rem' }}>
+            <span className="font-display text-2xl sm:text-4xl text-text-muted self-center">:</span>
+            <div className="text-4xl sm:text-5xl md:text-[4.5rem]">
               <ScoreDigit value={match.scoreAway} colorVariant={isLive ? 'cyan' : 'primary'} />
             </div>
           </div>
@@ -157,7 +157,7 @@ export const SingleMatchFocus: React.FC<SingleMatchFocusProps> = ({ match, event
                     </div>
 
                     {/* Clock Timestamp */}
-                    <span className="text-text-muted text-[10px] shrink-0 ml-4">
+                    <span className="text-text-muted text-[10px] shrink-0 ml-2 sm:ml-4 hidden sm:inline">
                       {event.timestamp}
                     </span>
                   </motion.div>

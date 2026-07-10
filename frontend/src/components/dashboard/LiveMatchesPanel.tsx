@@ -65,7 +65,7 @@ export const LiveMatchesPanel: React.FC<LiveMatchesPanelProps> = ({ matches }) =
             <div
               key={match.id}
               onClick={() => handleRowClick(match.id)}
-              className={`flex items-center justify-between p-3 bg-elevated/45 hover:bg-elevated/80 border border-cyan/5 hover:border-cyan/35 cursor-pointer select-none transition-all duration-200 group relative rounded-[2px] ${
+              className={`flex flex-wrap items-center justify-between gap-2 p-3 bg-elevated/45 hover:bg-elevated/80 border border-cyan/5 hover:border-cyan/35 cursor-pointer select-none transition-all duration-200 group relative rounded-[2px] ${
                 isMatchLive ? 'border-l-[3px] border-l-cyan pl-2.5' : 'pl-3'
               }`}
             >

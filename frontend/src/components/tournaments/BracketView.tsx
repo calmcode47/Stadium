@@ -11,25 +11,25 @@ interface BracketViewProps {
 
 export const BracketView: React.FC<BracketViewProps> = ({ rounds }) => {
   return (
-    <div className="w-full bg-surface/20 border border-cyan/15 rounded-[4px] p-6 overflow-hidden flex flex-col gap-4">
+    <div className="w-full bg-surface/20 border border-cyan/15 rounded-[4px] p-3 sm:p-6 overflow-hidden flex flex-col gap-4">
       
       {/* Title / Log bar */}
       <div className="flex items-center justify-between border-b border-cyan/10 pb-2">
         <DataLabel>SINGLE ELIMINATION CHAMPIONS MATRIX</DataLabel>
-        <span className="font-mono text-[9px] text-cyan/70 uppercase">
+        <span className="font-mono text-[9px] text-cyan/70 uppercase hidden sm:inline">
           HORIZONTAL TRACKER // DRAG OR SCROLL TO VIEW ALL ROUNDS
         </span>
       </div>
 
       {/* Bracket flex row - Horizontally scrolls on smaller screens with thin custom scrollbar */}
-      <div className="flex gap-12 md:gap-16 overflow-x-auto pb-6 pt-4 scrollbar-thin scrollbar-thumb-cyan/20 scrollbar-track-base/30 select-none">
+      <div className="flex gap-6 sm:gap-12 md:gap-16 overflow-x-auto pb-6 pt-4 scrollbar-thin scrollbar-thumb-cyan/20 scrollbar-track-base/30 select-none">
         {rounds.map((round) => {
           const isFinalRound = round.id === rounds.length
 
           return (
             <div 
               key={round.id} 
-              className="flex flex-col justify-around min-w-[260px] md:min-w-[280px] py-4 relative gap-8"
+              className="flex flex-col justify-around min-w-[220px] sm:min-w-[260px] md:min-w-[280px] py-4 relative gap-8"
               style={{ minHeight: '460px' }}
             >
               {/* Round Header Label */}

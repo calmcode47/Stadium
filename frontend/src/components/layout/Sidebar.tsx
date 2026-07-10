@@ -72,7 +72,7 @@ export const Sidebar: React.FC = () => {
       </aside>
 
       {/* Mobile Navigation Bottom Tab Bar - Visible only on mobile (<768px) */}
-      <nav aria-label="Mobile Navigation" className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-surface border-t border-cyan/20 z-50 flex items-center justify-around px-2 select-none">
+      <nav aria-label="Mobile Navigation" className="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-cyan/20 z-50 flex items-center justify-around px-2 select-none" style={{ paddingBottom: 'env(safe-area-inset-bottom)', height: 'calc(4rem + env(safe-area-inset-bottom))' }}>
         {navItems
           .filter(item => item.showOnMobile)
           .map((item) => {

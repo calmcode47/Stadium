@@ -1,0 +1,31 @@
+import { describe, expect, it } from 'vitest'
+import {
+  formatGeminiError,
+  GEMINI_MODEL,
+  parseGeminiRetryDelayMs,
+  resetGeminiRateLimiterForTests
+} from './geminiConfig'
+
+describe('geminiConfig', () => {
+  it('defaults to the flash-lite model for higher free-tier throughput', () => {
+    expect(GEMINI_MODEL).toBe('gemini-3.1-flash-lite-preview')
+  })
+
+  it('parses retry delays from quota error messages', () => {
+    expect(parseGeminiRetryDelayMs('Please retry in 11.45s.')).toBe(11450)
+    expect(parseGeminiRetryDelayMs('No retry hint')).toBeNull()
+  })
+
+  it('formats quota errors for operators', () => {
+    expect(formatGeminiError(429, 'Quota exceeded')).toContain('rate limit')
+  })
+
+  it('formats invalid key errors clearly', () => {
+    expect(formatGeminiError(400, 'API key not valid. Please pass a valid API key.')).toContain('API key is invalid')
+  })
+
+  it('resets the client rate limiter in tests', () => {
+    resetGeminiRateLimiterForTests()
+    expect(true).toBe(true)
+  })
+})

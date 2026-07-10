@@ -42,7 +42,7 @@ export const Overview: React.FC = () => {
         className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch"
       >
         {/* Left Column: Command details */}
-        <div className="lg:col-span-7 flex flex-col justify-between p-6 md:p-8 bg-surface border border-cyan/20 rounded-[4px] relative overflow-hidden">
+        <div className="lg:col-span-7 flex flex-col justify-between p-4 sm:p-6 md:p-8 bg-surface border border-cyan/20 rounded-[4px] relative overflow-hidden">
           
           {/* Hexagonal grid absolute overlay for premium tech style */}
           <div className="absolute inset-0 bg-grid opacity-10 pointer-events-none" />
@@ -55,12 +55,12 @@ export const Overview: React.FC = () => {
               </DataLabel>
             </div>
             
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-display tracking-wide uppercase text-text-primary leading-tight">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-display tracking-wide uppercase text-text-primary leading-tight">
               Smart Stadium <br />
               <span className="text-cyan">Operations Center</span>
             </h1>
             
-            <div className="mt-4 font-mono text-xs text-text-muted border-l-2 border-cyan/40 pl-4 py-1.5 bg-base/30 max-w-lg">
+            <div className="mt-4 font-mono text-[9px] sm:text-xs text-text-muted border-l-2 border-cyan/40 pl-3 sm:pl-4 py-1.5 bg-base/30 max-w-lg break-words">
               SYSTEM STATUS: <span className="text-success font-semibold">NOMINAL</span> // 
               HOST: <span className="text-text-primary">OPS-SRV-MAIN-01</span> // 
               LATENCY: <span className="text-cyan">8MS</span>
@@ -86,7 +86,7 @@ export const Overview: React.FC = () => {
         </div>
 
         {/* Right Column: 3D procedural wireframe moment */}
-        <div className="lg:col-span-5 h-[320px] lg:h-auto min-h-[350px] flex">
+        <div className="lg:col-span-5 h-[250px] sm:h-[320px] lg:h-auto min-h-[250px] lg:min-h-[350px] flex">
           <Stadium3D />
         </div>
       </motion.section>
