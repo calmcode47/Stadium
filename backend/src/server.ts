@@ -11,10 +11,11 @@ const env = getEnv()
 const { db } = getDatabase()
 
 const bootstrap = async (): Promise<void> => {
-  // Auto-seed on first boot (empty DB — fresh Railway deployment)
+  // Seed if: no operators exist OR SEED_ON_START=true is explicitly set
+  const forceReseed = process.env.SEED_ON_START === 'true'
   const existingOperators = db.select().from(operators).all()
-  if (existingOperators.length === 0) {
-    console.info('No operators found — seeding demo database...')
+  if (existingOperators.length === 0 || forceReseed) {
+    console.info(`Seeding demo database (force=${forceReseed})...`)
     await seedDatabase()
     console.info('Database seeded successfully.')
   }
