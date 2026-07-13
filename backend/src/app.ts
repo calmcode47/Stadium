@@ -14,6 +14,7 @@ import alertsRoutes from './modules/alerts/routes'
 import tournamentsRoutes from './modules/tournaments/routes'
 import assistantRoutes from './modules/assistant/routes'
 
+/** Creates the configured Express application with security, API routes, and error handling. */
 export const createApp = (): express.Express => {
   const env = getEnv()
   const app = express()

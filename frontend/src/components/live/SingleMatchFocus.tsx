@@ -1,6 +1,8 @@
 import React from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { RefreshCw, Timer, Target } from 'lucide-react'
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw.mjs'
+import Timer from 'lucide-react/dist/esm/icons/timer.mjs'
+import Target from 'lucide-react/dist/esm/icons/target.mjs'
 import type { Match, MatchEvent } from '@/types/operations'
 import Panel from '@/components/design-system/Panel'
 import DataLabel from '@/components/design-system/DataLabel'
@@ -11,7 +13,7 @@ interface SingleMatchFocusProps {
   events: MatchEvent[]
 }
 
-export const SingleMatchFocus: React.FC<SingleMatchFocusProps> = ({ match, events }) => {
+export const SingleMatchFocus: React.FC<SingleMatchFocusProps> = React.memo(({ match, events }) => {
   const shouldReduceMotion = useReducedMotion()
   const isLive = match.status === 'live'
 
@@ -170,6 +172,6 @@ export const SingleMatchFocus: React.FC<SingleMatchFocusProps> = ({ match, event
 
     </div>
   )
-}
+})
 
 export default SingleMatchFocus

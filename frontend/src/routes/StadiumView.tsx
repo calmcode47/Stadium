@@ -1,39 +1,46 @@
-import React, { useState, useEffect } from 'react'
-import { 
-  ShieldAlert, 
-  DoorOpen, 
-  DoorClosed, 
-  Map, 
-  Layers, 
-  AlertTriangle 
-} from 'lucide-react'
+import React, { Suspense, useMemo, useState } from 'react'
+import ShieldAlert from 'lucide-react/dist/esm/icons/shield-alert.mjs'
+import DoorOpen from 'lucide-react/dist/esm/icons/door-open.mjs'
+import DoorClosed from 'lucide-react/dist/esm/icons/door-closed.mjs'
+import Map from 'lucide-react/dist/esm/icons/map.mjs'
+import Layers from 'lucide-react/dist/esm/icons/layers.mjs'
+import AlertTriangle from 'lucide-react/dist/esm/icons/triangle-alert.mjs'
 import { useOperations } from '@/hooks/useOperations'
 import type { StandSection } from '@/types/operations'
 import Panel from '@/components/design-system/Panel'
 import DataLabel from '@/components/design-system/DataLabel'
 import StatusPill from '@/components/design-system/StatusPill'
 import Button from '@/components/design-system/Button'
-import StadiumInteractive3D from '@/components/stadium/StadiumInteractive3D'
 import StadiumInteractive2D from '@/components/stadium/StadiumInteractive2D'
+
+const StadiumInteractive3D = React.lazy(() => import('@/components/stadium/StadiumInteractive3D'))
+
+const StadiumSceneFallback: React.FC = () => (
+  <Panel className="w-full h-full flex flex-col justify-between p-4 bg-surface/80 border-cyan/20 animate-pulse">
+    <div className="flex items-center justify-between border-b border-cyan/10 pb-3">
+      <DataLabel className="text-cyan">LOADING 3D SECTOR MODEL</DataLabel>
+      <div className="h-5 w-20 bg-cyan/10 border border-cyan/10 rounded-none" />
+    </div>
+    <div className="flex-1 flex items-center justify-center">
+      <div className="w-56 h-56 border border-dashed border-cyan/15 rounded-full flex items-center justify-center">
+        <div className="w-36 h-36 border border-dashed border-cyan/10 rounded-full" />
+      </div>
+    </div>
+    <div className="h-2 w-48 bg-cyan/10 rounded-none self-center" />
+  </Panel>
+)
 
 export const StadiumView: React.FC = () => {
   const { sections, toggleGate, clearIncidents, canMutate } = useOperations()
   const [selectedSection, setSelectedSection] = useState<StandSection | null>(null)
   const [cameraPreset, setCameraPreset] = useState<'overview' | 'pitch' | 'north'>('overview')
-  const [isSimplified, setIsSimplified] = useState<boolean>(false)
+  const [isSimplified, setIsSimplified] = useState<boolean>(() => (navigator.hardwareConcurrency || 4) < 4)
 
   // Derive the current state of the selected section from operations context to keep it in sync
-  const currentSection = selectedSection 
-    ? sections.find(s => s.id === selectedSection.id) || null 
-    : null
-
-  // Hardware concurrency check on mount to auto-trigger Simplified View on low-end systems
-  useEffect(() => {
-    const cores = navigator.hardwareConcurrency || 4
-    if (cores < 4) {
-      setIsSimplified(true)
-    }
-  }, [])
+  const currentSection = useMemo(
+    () => (selectedSection ? sections.find(s => s.id === selectedSection.id) || null : null),
+    [sections, selectedSection]
+  )
 
   return (
     <div className="w-full h-full lg:relative flex flex-col lg:block select-none overflow-y-auto lg:overflow-hidden p-4 lg:p-0 gap-4">
@@ -47,12 +54,14 @@ export const StadiumView: React.FC = () => {
             onSelectSection={setSelectedSection}
           />
         ) : (
-          <StadiumInteractive3D
-            sections={sections}
-            selectedSectionId={selectedSection?.id || null}
-            onSelectSection={setSelectedSection}
-            cameraPreset={cameraPreset}
-          />
+          <Suspense fallback={<StadiumSceneFallback />}>
+            <StadiumInteractive3D
+              sections={sections}
+              selectedSectionId={selectedSection?.id || null}
+              onSelectSection={setSelectedSection}
+              cameraPreset={cameraPreset}
+            />
+          </Suspense>
         )}
       </div>
 

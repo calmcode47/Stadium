@@ -103,7 +103,8 @@ export const mapAlert = (row: AlertRow): Alert => ({
   timestamp: timeOfDay(row.createdAt),
   message: row.message,
   level: row.severity,
-  isAcknowledged: row.acknowledged
+  isAcknowledged: row.acknowledged,
+  createdAt: row.createdAt
 })
 
 export const mapMatchEvent = (row: MatchEventRow): MatchEvent => ({
@@ -144,7 +145,8 @@ export const mapBracketMatch = (row: MatchRow, venueName: string, roundOrder: nu
     winner: row.winner ?? undefined,
     time: date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
     date: date.toLocaleDateString('en-US', { month: 'long', day: '2-digit' }).toUpperCase(),
-    venue: venueName
+    venue: venueName,
+    scheduledStart: row.scheduledStart
   }
 }
 

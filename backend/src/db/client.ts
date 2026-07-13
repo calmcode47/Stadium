@@ -138,7 +138,14 @@ export const ensureSchema = (sqlite: Database.Database): void => {
 
     CREATE INDEX IF NOT EXISTS idx_matches_status ON matches(status);
     CREATE INDEX IF NOT EXISTS idx_matches_venue ON matches(venue_id);
+    CREATE INDEX IF NOT EXISTS idx_matches_tournament_round_start ON matches(tournament_id, round_id, scheduled_start);
+    CREATE INDEX IF NOT EXISTS idx_matches_tournament_start ON matches(tournament_id, scheduled_start);
+    CREATE INDEX IF NOT EXISTS idx_matches_round ON matches(round_id);
+    CREATE INDEX IF NOT EXISTS idx_rounds_tournament_order ON rounds(tournament_id, order_index);
+    CREATE INDEX IF NOT EXISTS idx_match_events_match_created ON match_events(match_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_venues_kind ON venues(kind);
     CREATE INDEX IF NOT EXISTS idx_alerts_filters ON alerts(acknowledged, severity, venue_id);
+    CREATE INDEX IF NOT EXISTS idx_decision_log_operator ON decision_log_entries(operator_id);
     CREATE INDEX IF NOT EXISTS idx_decision_log_created ON decision_log_entries(created_at DESC);
   `)
 }

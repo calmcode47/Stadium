@@ -28,6 +28,7 @@ export interface Alert {
   message: string
   level: AlertLevel
   isAcknowledged: boolean
+  createdAt?: string
 }
 
 export interface Tournament {
@@ -61,6 +62,7 @@ export interface BracketMatch {
   time: string
   date: string
   venue: string
+  scheduledStart?: string
 }
 
 export interface Round {

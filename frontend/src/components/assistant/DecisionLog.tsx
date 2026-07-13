@@ -1,8 +1,8 @@
 import React from 'react'
 import { useOperations } from '@/hooks/useOperations'
-import { Terminal } from 'lucide-react'
+import Terminal from 'lucide-react/dist/esm/icons/terminal.mjs'
 
-export const DecisionLog: React.FC = () => {
+export const DecisionLog: React.FC = React.memo(() => {
   const { decisionLog } = useOperations()
 
   return (
@@ -44,6 +44,6 @@ export const DecisionLog: React.FC = () => {
       )}
     </div>
   )
-}
+})
 
 export default DecisionLog

@@ -1,13 +1,23 @@
 # Smart Stadium & Tournament Operations
 
+Built for stadium operations staff and control-room operators who need fast, explainable decisions during live events.
+
 ## 1. Chosen Vertical
 This application is designed for stadium/venue operations and tournament management. The solution is built around the persona of on-site operations staff and event control-room operators. These users require rapid situational awareness, high-density telemetry, and prioritized, explainable recommendations during live events to manage crowd congestion, security incidents, match delays, and tournament progression.
 
 ## 2. Approach & Logic
-The platform architecture utilizes a strict two-layer design for its Smart Operations Assistant:
+The platform architecture uses a strict two-layer design for its Smart Operations Assistant:
 
 1. **Deterministic Decision Engine (`src/lib/assistantEngine.ts`)**: A pure, framework-free TypeScript engine. It evaluates the operations state (matches, zones, alerts, stand sections, rounds) against defined threshold rules to generate prioritized and explainable recommendations. This layer contains no React dependencies, no side effects, and is fully unit-testable in isolation.
-2. **AI Explanation Layer (Optional)**: If a Gemini API key is configured, an optional LLM request is made to synthesize the deterministic reasoning factors into a natural language operational briefing. If the API key is absent or the request fails, the system automatically falls back to local structured template generation.
+2. **Google Gemini Explanation and Chat Layer**: If a Gemini API key is configured, the product uses Gemini to synthesize already-generated deterministic reasoning into a short natural-language "AI Summary" and to power the assistant chat panel. If the API key is absent or a request fails, recommendation explanations fall back to local structured template generation.
+
+The deterministic engine decides **what** recommendation appears, its priority, and the reasoning trail. Gemini only explains those decisions in operator-friendly language and answers chat questions using the current operations state. This separation is deliberate: the system demonstrates Gen AI usage without making operational decisions a black box.
+
+The four rule families use current context rather than isolated static checks:
+- **Gate congestion** weighs high occupancy against live match timing and locked stand exits.
+- **Match delay risk** compares delayed matches with the next same-venue scheduled kickoff, so tight turnaround windows are treated as more urgent.
+- **Incident escalation** combines unresolved alert count, highest severity, and recency.
+- **Tournament bottlenecks** raise urgency when a delayed match directly blocks next-round TBD slots.
 
 ### Rationale for the Split:
 - **Testability**: The core recommendation logic is written as pure mathematical functions, allowing 100% test coverage of boundary conditions and trigger thresholds without mocking React or browser environments.
@@ -147,16 +157,24 @@ Backend variables are documented in `backend/.env.example`:
 - `DATABASE_FILE`
 - `JWT_SECRET`
 - `JWT_EXPIRES_IN`
-- `FRONTEND_ORIGIN`
+- `FRONTEND_ORIGIN` (set to the exact Netlify production origin in Railway; do not use `*`)
 - `GEMINI_API_KEY`
 - `GEMINI_MODEL`
 - `ENABLE_SIMULATOR`
+- `SEED_ON_START`
 
 Frontend variables are documented in `frontend/.env.example`:
 - `VITE_GEMINI_API_KEY`
 - `VITE_GEMINI_MODEL`
-- `VITE_API_BASE_URL`
-- `VITE_WS_URL`
+- `VITE_API_BASE_URL` (Netlify production value should point at the Railway API URL ending in `/api`)
+- `VITE_WS_URL` (Netlify production value should use `wss://.../ws`, not `ws://`)
+
+### Deployment Notes
+- Netlify is configured with `base = "frontend"`, `command = "npm run build"`, and `publish = "frontend/dist"` in `netlify.toml`.
+- Railway is configured for the backend service with Nixpacks and starts `node dist/src/server.js`.
+- The backend CORS origin is read from `FRONTEND_ORIGIN`; production should use the exact deployed Netlify URL.
+- The frontend WebSocket client reads `VITE_WS_URL`; production should use the Railway backend WebSocket endpoint over `wss://`.
+- If Railway cold-starts the backend, the frontend shows loading/error states and then falls back to last-known demo data instead of rendering a blank screen.
 
 ### Execute Test Suites
 ```bash

@@ -29,6 +29,10 @@ export const NEAR_MATCH_END_MINUTE = 75
 export const LOCKED_SECTION_RATIO = 0.8
 // Two unresolved alerts in the same zone are enough to indicate a pattern, not a single noisy sensor.
 export const INCIDENT_CLUSTER_COUNT = 2
+// A same-venue delayed match is urgent when the next scheduled slot is within one hour.
+export const TIGHT_TURNAROUND_MINUTES = 60
+// Recent incidents are weighted more heavily because active operators still need to respond.
+export const RECENT_INCIDENT_MINUTES = 15
 
 const priorityWeight: Record<Recommendation['priority'], number> = {
   critical: 4,
@@ -39,6 +43,7 @@ const priorityWeight: Record<Recommendation['priority'], number> = {
 
 const slug = (input: string): string => input.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toUpperCase()
 
+/** Evaluates crowd egress risk from live-match timing, zone occupancy, and locked stand exits. */
 export const evaluateGateCongestion = (
   matches: Match[],
   zones: VenueZone[],
@@ -96,6 +101,7 @@ export const evaluateGateCongestion = (
   return [...zoneRecommendations, ...sectionRecommendations]
 }
 
+/** Evaluates same-venue schedule risk and weights priority by the gap to the next scheduled match. */
 export const evaluateMatchDelayRisk = (rounds: Round[]): Recommendation[] => {
   const allMatches = rounds.flatMap(round => round.matches)
   const byVenue = new Map<string, typeof allMatches>()
@@ -113,14 +119,27 @@ export const evaluateMatchDelayRisk = (rounds: Round[]): Recommendation[] => {
 
     for (const delayedMatch of delayed) {
       for (const scheduledMatch of scheduled) {
+        const gapMinutes = minutesBetween(delayedMatch.scheduledStart, scheduledMatch.scheduledStart)
+        if (gapMinutes !== null && gapMinutes < 0) continue
+        const priority: Recommendation['priority'] =
+          gapMinutes !== null && gapMinutes <= TIGHT_TURNAROUND_MINUTES
+            ? 'high'
+            : gapMinutes !== null && gapMinutes > 180
+              ? 'low'
+              : 'medium'
+        const gapReason =
+          gapMinutes === null
+            ? 'No reliable scheduled-start gap is available, so shared venue contention is treated as medium risk'
+            : `Next same-venue kickoff is ${gapMinutes} min after the delayed match slot`
+
         recommendations.push({
           id: `REC-DELAY-${delayedMatch.id}-${scheduledMatch.id}`,
-          priority: 'medium',
+          priority,
           title: `Schedule Delay Risk: ${venue}`,
           reasoning: [
             `Match ${delayedMatch.id} (${delayedMatch.teamHome} vs ${delayedMatch.teamAway}) is delayed at "${venue}"`,
             `Subsequent match ${scheduledMatch.id} (${scheduledMatch.teamHome} vs ${scheduledMatch.teamAway}) is scheduled at the same venue`,
-            'Compounding delay risk detected for shared venue resource'
+            gapReason
           ],
           suggestedAction: `Adjust subsequent kickoff slot for ${scheduledMatch.id} by +30 minutes.`,
           relatedEntityId: delayedMatch.id
@@ -132,6 +151,7 @@ export const evaluateMatchDelayRisk = (rounds: Round[]): Recommendation[] => {
   return recommendations
 }
 
+/** Evaluates unresolved alert clusters by venue keyword, severity, and incident recency. */
 export const evaluateIncidentEscalation = (alerts: Alert[]): Recommendation[] => {
   const unresolved = alerts.filter(alert => !alert.isAcknowledged)
   const zoneAlerts = new Map<string, Alert[]>()
@@ -148,12 +168,15 @@ export const evaluateIncidentEscalation = (alerts: Alert[]): Recommendation[] =>
     if (alertsInZone.length < INCIDENT_CLUSTER_COUNT) continue
 
     const hasCritical = alertsInZone.some(alert => alert.level === 'critical')
+    const recentCount = alertsInZone.filter(isRecentAlert).length
+    const priority: Recommendation['priority'] = hasCritical ? 'critical' : 'high'
     recommendations.push({
       id: `REC-INCIDENT-${slug(zone)}`,
-      priority: hasCritical ? 'critical' : 'high',
+      priority,
       title: `Incident Dispatch: ${zone}`,
       reasoning: [
         `${alertsInZone.length} unacknowledged alerts detected in "${zone}"`,
+        `${recentCount} alert${recentCount === 1 ? '' : 's'} occurred within the last ${RECENT_INCIDENT_MINUTES} minutes and highest severity is ${highestSeverity(alertsInZone).toUpperCase()}`,
         ...alertsInZone.map(alert => `[${alert.timestamp}] ${alert.message}`)
       ],
       suggestedAction: `Dispatch a tactical operations patrol to resolve incidents in ${zone}.`,
@@ -164,6 +187,7 @@ export const evaluateIncidentEscalation = (alerts: Alert[]): Recommendation[] =>
   return recommendations
 }
 
+/** Evaluates delayed bracket matches that block downstream TBD slots from being resolved. */
 export const evaluateTournamentBottleneck = (rounds: Round[]): Recommendation[] => {
   const recommendations: Recommendation[] = []
 
@@ -174,6 +198,7 @@ export const evaluateTournamentBottleneck = (rounds: Round[]): Recommendation[] 
     const completed = round.matches.filter(match => match.status === 'completed').length
     const total = round.matches.length
     const pct = total === 0 ? 0 : Math.round((completed / total) * 100)
+    const immediateNextRound = rounds[index + 1]
     const subsequentRounds = rounds.slice(index + 1)
     const blockedMatches = subsequentRounds
       .flatMap(subRound => subRound.matches)
@@ -183,13 +208,18 @@ export const evaluateTournamentBottleneck = (rounds: Round[]): Recommendation[] 
     if (blockedMatches.length === 0) return
 
     for (const delayedMatch of delayedMatches) {
+      const directlyBlocksNextRound = Boolean(
+        immediateNextRound?.matches.some(match => match.teamHome.includes('TBD') || match.teamAway.includes('TBD'))
+      )
+      const priority: Recommendation['priority'] = directlyBlocksNextRound && pct >= 75 ? 'high' : 'medium'
       recommendations.push({
         id: `REC-BOTTLENECK-${delayedMatch.id}`,
-        priority: 'medium',
+        priority,
         title: `Bracket Bottleneck: ${round.name}`,
         reasoning: [
           `Round "${round.name}" is bottlenecked at ${pct}% completion (${completed}/${total} matches)`,
           `Delayed match ${delayedMatch.id} (${delayedMatch.teamHome} vs ${delayedMatch.teamAway}) halts progression`,
+          directlyBlocksNextRound ? 'The immediate next round still has TBD slots waiting on this result' : 'Later bracket slots still depend on this result',
           `Blocks progression of: ${blockedMatches.slice(0, 2).join(', ')}`
         ],
         suggestedAction: `Fast-track pitch resolution for ${delayedMatch.id} or manually override winner to clear the bracket.`,
@@ -201,6 +231,7 @@ export const evaluateTournamentBottleneck = (rounds: Round[]): Recommendation[] 
   return recommendations
 }
 
+/** Generates deterministic recommendations from the full operations snapshot sorted by priority. */
 export const generateRecommendations = (state: OperationsState): Recommendation[] => {
   const all = [
     ...evaluateGateCongestion(state.matches, state.zones, state.sections),
@@ -215,6 +246,7 @@ export const generateRecommendations = (state: OperationsState): Recommendation[
   })
 }
 
+/** Produces a short natural-language explanation for a deterministic recommendation. */
 export const explainWithAI = async (recommendation: Recommendation, apiKey?: string): Promise<string> => {
   if (!apiKey) return templateExplanation(recommendation.reasoning)
 
@@ -248,6 +280,27 @@ export const explainWithAI = async (recommendation: Recommendation, apiKey?: str
 }
 
 const templateExplanation = (reasoning: string[]): string => `${reasoning.map(reason => reason.trim().replace(/\.$/, '')).join(' and ')}.`
+
+const minutesBetween = (from?: string, to?: string): number | null => {
+  if (!from || !to) return null
+  const fromMs = Date.parse(from)
+  const toMs = Date.parse(to)
+  if (Number.isNaN(fromMs) || Number.isNaN(toMs)) return null
+  return Math.round((toMs - fromMs) / 60_000)
+}
+
+const isRecentAlert = (alert: Alert): boolean => {
+  if (!alert.createdAt) return false
+  const createdMs = Date.parse(alert.createdAt)
+  if (Number.isNaN(createdMs)) return false
+  return Date.now() - createdMs <= RECENT_INCIDENT_MINUTES * 60_000
+}
+
+const highestSeverity = (alerts: Alert[]): Alert['level'] => {
+  if (alerts.some(alert => alert.level === 'critical')) return 'critical'
+  if (alerts.some(alert => alert.level === 'warning')) return 'warning'
+  return 'info'
+}
 
 const inferAlertZone = (message: string): string => {
   const upper = message.toUpperCase()

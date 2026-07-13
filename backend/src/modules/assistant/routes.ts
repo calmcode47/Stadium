@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { eq } from 'drizzle-orm'
+import { desc, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { getEnv } from '../../config/env'
 import { getDatabase } from '../../db/client'
@@ -88,9 +88,10 @@ router.get('/decision-log', requireAuth, validate('query', paginationSchema), (r
   const rows = getDatabase().db
     .select()
     .from(decisionLogEntries)
+    .orderBy(desc(decisionLogEntries.createdAt))
+    .limit(query.limit)
+    .offset(query.offset)
     .all()
-    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
-    .slice(query.offset, query.offset + query.limit)
 
   res.json({
     data: rows.map(row => ({

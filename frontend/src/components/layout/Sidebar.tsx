@@ -1,13 +1,11 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
-import { 
-  Home, 
-  LayoutDashboard, 
-  Map, 
-  Trophy, 
-  Radio, 
-  ShieldCheck 
-} from 'lucide-react'
+import Home from 'lucide-react/dist/esm/icons/house.mjs'
+import LayoutDashboard from 'lucide-react/dist/esm/icons/layout-dashboard.mjs'
+import Map from 'lucide-react/dist/esm/icons/map.mjs'
+import Trophy from 'lucide-react/dist/esm/icons/trophy.mjs'
+import Radio from 'lucide-react/dist/esm/icons/radio.mjs'
+import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check.mjs'
 import DataLabel from '@/components/design-system/DataLabel'
 
 export const Sidebar: React.FC = () => {

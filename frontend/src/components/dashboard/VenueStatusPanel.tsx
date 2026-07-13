@@ -8,7 +8,7 @@ interface VenueStatusPanelProps {
   zones: VenueZone[]
 }
 
-export const VenueStatusPanel: React.FC<VenueStatusPanelProps> = ({ zones }) => {
+export const VenueStatusPanel: React.FC<VenueStatusPanelProps> = React.memo(({ zones }) => {
   return (
     <Panel className="flex flex-col gap-4">
       <div className="flex items-center justify-between border-b border-cyan/15 pb-2">
@@ -52,6 +52,6 @@ export const VenueStatusPanel: React.FC<VenueStatusPanelProps> = ({ zones }) => 
       </div>
     </Panel>
   )
-}
+})
 
 export default VenueStatusPanel

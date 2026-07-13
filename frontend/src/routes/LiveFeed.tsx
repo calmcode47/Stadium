@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Radio, LayoutGrid, AlertTriangle } from 'lucide-react'
+import Radio from 'lucide-react/dist/esm/icons/radio.mjs'
+import LayoutGrid from 'lucide-react/dist/esm/icons/layout-grid.mjs'
+import AlertTriangle from 'lucide-react/dist/esm/icons/triangle-alert.mjs'
 import { useOperations } from '@/hooks/useOperations'
 import Panel from '@/components/design-system/Panel'
 import DataLabel from '@/components/design-system/DataLabel'
@@ -28,7 +30,7 @@ export const LiveFeed: React.FC = () => {
       // Default to first match if no id is specified
       setSelectedMatchId('M-101')
     }
-  }, [matchId])
+  }, [matchId, selectedMatchId])
 
   const handleMatchSelect = (id: string) => {
     setSelectedMatchId(id)
@@ -69,7 +71,9 @@ export const LiveFeed: React.FC = () => {
           <div className="flex items-center gap-3">
             <DataLabel>FOCUS TARGET:</DataLabel>
             <div className="relative inline-block min-w-[200px]">
+              <label htmlFor="live-match-select" className="sr-only">Live match focus target</label>
               <select
+                id="live-match-select"
                 value={selectedMatchId || ''}
                 onChange={(e) => handleMatchSelect(e.target.value)}
                 className="appearance-none w-full bg-elevated border border-cyan/30 text-text-primary hover:border-cyan hover:text-cyan font-mono text-xs px-3 pr-8 py-1.5 rounded-[2px] outline-none transition-colors duration-150 uppercase tracking-widest cursor-pointer"

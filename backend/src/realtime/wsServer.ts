@@ -2,6 +2,7 @@ import type { Server as HttpServer } from 'node:http'
 import { WebSocketServer } from 'ws'
 import { registerClient } from './broadcaster'
 
+/** Attaches the subscribed WebSocket event stream to the HTTP server. */
 export const attachWebSocketServer = (server: HttpServer): WebSocketServer => {
   const wsServer = new WebSocketServer({ server, path: '/ws' })
   wsServer.on('connection', socket => {

@@ -1,6 +1,8 @@
 import React from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { AlertTriangle, Info, Skull } from 'lucide-react'
+import AlertTriangle from 'lucide-react/dist/esm/icons/triangle-alert.mjs'
+import Info from 'lucide-react/dist/esm/icons/info.mjs'
+import Skull from 'lucide-react/dist/esm/icons/skull.mjs'
 import type { Alert } from '@/types/operations'
 import Panel from '@/components/design-system/Panel'
 import DataLabel from '@/components/design-system/DataLabel'
@@ -12,7 +14,7 @@ interface AlertsFeedPanelProps {
   onAcknowledgeAlert?: (id: string) => void
 }
 
-export const AlertsFeedPanel: React.FC<AlertsFeedPanelProps> = ({ 
+export const AlertsFeedPanel: React.FC<AlertsFeedPanelProps> = React.memo(({
   alerts,
   onAddAlert,
   onAcknowledgeAlert
@@ -74,7 +76,6 @@ export const AlertsFeedPanel: React.FC<AlertsFeedPanelProps> = ({
               return (
                 <motion.div
                   key={alert.id}
-                  aria-live={alert.level === 'critical' ? 'assertive' : 'polite'}
                   initial={shouldReduceMotion ? { opacity: 0 } : { 
                     opacity: 0, 
                     y: -10, 
@@ -104,7 +105,10 @@ export const AlertsFeedPanel: React.FC<AlertsFeedPanelProps> = ({
                   <div className="flex-1 flex flex-col gap-0.5">
                     {/* Timestamp & Alert Source */}
                     <div className="flex justify-between items-center text-[9px]">
-                      <span className={`${style.text} font-bold tracking-wider uppercase`}>
+                      <span
+                        className={`${style.text} font-bold tracking-wider uppercase`}
+                        aria-live={alert.level === 'critical' ? 'assertive' : 'polite'}
+                      >
                         {alert.level}
                       </span>
                       <span className="text-text-muted">{alert.timestamp}</span>
@@ -132,6 +136,6 @@ export const AlertsFeedPanel: React.FC<AlertsFeedPanelProps> = ({
       </div>
     </Panel>
   )
-}
+})
 
 export default AlertsFeedPanel

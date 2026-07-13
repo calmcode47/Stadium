@@ -1,3 +1,7 @@
+export type MatchStatus = 'live' | 'scheduled' | 'completed' | 'delayed' | 'cancelled'
+export type AlertLevel = 'info' | 'warning' | 'critical'
+export type OperatorRole = 'admin' | 'operator' | 'viewer'
+
 export interface Match {
   id: string
   teamHome: string
@@ -6,7 +10,7 @@ export interface Match {
   scoreAway: number
   timeElapsed: number // in minutes
   isLive: boolean
-  status: 'live' | 'scheduled' | 'completed' | 'delayed' | 'cancelled'
+  status: MatchStatus
   statusLabel: string
 }
 
@@ -14,7 +18,7 @@ export interface VenueZone {
   name: string
   occupancy: number
   maxCapacity: number
-  status: 'live' | 'scheduled' | 'completed' | 'delayed' | 'cancelled' // maps to StatusVariant
+  status: MatchStatus // maps to StatusVariant
   statusLabel: string
 }
 
@@ -22,8 +26,9 @@ export interface Alert {
   id: string
   timestamp: string // HH:MM:SS format
   message: string
-  level: 'info' | 'warning' | 'critical'
+  level: AlertLevel
   isAcknowledged: boolean
+  createdAt?: string
 }
 
 export interface Tournament {
@@ -50,13 +55,14 @@ export interface BracketMatch {
   teamAway: string
   scoreHome?: number
   scoreAway?: number
-  status: 'live' | 'scheduled' | 'completed' | 'delayed' | 'cancelled'
+  status: MatchStatus
   statusLabel: string
   nextMatchId?: string // Link to the next match
   winner?: 'home' | 'away'
   time: string
   date: string
   venue: string
+  scheduledStart?: string
 }
 
 export interface Round {
@@ -98,5 +104,14 @@ export interface OperatorProfile {
   id: string
   name: string
   email: string
-  role: 'admin' | 'operator' | 'viewer'
+  role: OperatorRole
+}
+
+export interface OperationsState {
+  matches: Match[]
+  zones: VenueZone[]
+  alerts: Alert[]
+  tournament: Tournament
+  rounds: Round[]
+  sections: StandSection[]
 }

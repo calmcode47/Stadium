@@ -38,19 +38,33 @@ describe('websocket broadcasts', () => {
   it('receives match:updated after REST patch', async () => {
     const token = await loginAs('operator')
     const wsUrl = baseUrl.replace('http', 'ws') + '/ws'
+    let socket: WebSocket | null = null
+    const subscribed = new Promise<void>((resolve, reject) => {
+      socket = new WebSocket(wsUrl)
+      const timeout = setTimeout(() => reject(new Error('Timed out waiting for websocket open')), 5000)
+      socket.on('open', () => {
+        socket?.send(JSON.stringify({ action: 'subscribe', type: 'match:updated' }))
+        clearTimeout(timeout)
+        setTimeout(resolve, 25)
+      })
+    })
+
     const messagePromise = new Promise<unknown>((resolve, reject) => {
-      const socket = new WebSocket(wsUrl)
-      const timeout = setTimeout(() => reject(new Error('Timed out waiting for match update')), 5000)
-      socket.on('message', data => {
+      const timeout = setTimeout(() => {
+        socket?.close()
+        reject(new Error('Timed out waiting for match update'))
+      }, 5000)
+      socket?.on('message', data => {
         const message = JSON.parse(data.toString()) as { type: string; payload: unknown }
         if (message.type === 'match:updated') {
           clearTimeout(timeout)
-          socket.close()
+          socket?.close()
           resolve(message.payload)
         }
       })
     })
 
+    await subscribed
     await request(baseUrl).patch('/api/matches/M-101').set('Authorization', `Bearer ${token}`).send({ scoreHome: 4 }).expect(200)
     const payload = (await messagePromise) as { id: string; scoreHome: number }
     expect(payload).toMatchObject({ id: 'M-101', scoreHome: 4 })

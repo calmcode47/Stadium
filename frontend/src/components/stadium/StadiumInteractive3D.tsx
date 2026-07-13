@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls, Edges, Html } from '@react-three/drei'
 import * as THREE from 'three'
@@ -9,6 +9,11 @@ interface StadiumInteractive3DProps {
   selectedSectionId: string | null
   onSelectSection: (section: StandSection) => void
   cameraPreset: 'overview' | 'pitch' | 'north'
+}
+
+interface OrbitControlsLike {
+  target: THREE.Vector3
+  update: () => void
 }
 
 // Camera Tween sub-component to smoothly interpolate position and lookAt target
@@ -41,7 +46,7 @@ const CameraTween: React.FC<{
     camera.position.lerp(target.position, speed)
 
     // Lerp controls target (where the camera looks)
-    const controls = state.controls as any
+    const controls = (state as typeof state & { controls?: OrbitControlsLike }).controls
     if (controls) {
       const currentTarget = new THREE.Vector3().copy(controls.target)
       currentTarget.lerp(target.lookAt, speed)
@@ -123,17 +128,17 @@ const lampMaterial = new THREE.MeshBasicMaterial({
   toneMapped: false 
 })
 
-export const StadiumInteractive3D: React.FC<StadiumInteractive3DProps> = ({
+export const StadiumInteractive3D: React.FC<StadiumInteractive3DProps> = React.memo(({
   sections,
   selectedSectionId,
   onSelectSection,
   cameraPreset
 }) => {
   // Map sections by their ID for easy access
-  const standMap = sections.reduce((acc, curr) => {
+  const standMap = useMemo(() => sections.reduce((acc, curr) => {
     acc[curr.id] = curr
     return acc
-  }, {} as Record<string, StandSection>)
+  }, {} as Record<string, StandSection>), [sections])
 
   return (
     <div className="w-full h-full relative bg-base/20 border border-cyan/20 rounded-[4px] overflow-hidden select-none">
@@ -256,6 +261,6 @@ export const StadiumInteractive3D: React.FC<StadiumInteractive3DProps> = ({
       </div>
     </div>
   )
-}
+})
 
 export default StadiumInteractive3D

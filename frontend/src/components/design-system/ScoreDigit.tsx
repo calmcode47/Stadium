@@ -1,7 +1,7 @@
 import React from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
+import { motion, useReducedMotion, type HTMLMotionProps } from 'framer-motion'
 
-interface ScoreDigitProps extends React.HTMLAttributes<HTMLSpanElement> {
+interface ScoreDigitProps extends HTMLMotionProps<'span'> {
   value: string | number
   colorVariant?: 'amber' | 'cyan' | 'primary'
 }
@@ -48,7 +48,7 @@ export const ScoreDigit: React.FC<ScoreDigitProps> = ({
       }}
       className={`font-display inline-block leading-none select-none ${colorMap[colorVariant]} ${className}`}
       style={{ fontSize: 'inherit' }}
-      {...(props as any)}
+      {...props}
     >
       {value}
     </motion.span>

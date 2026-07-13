@@ -1,21 +1,35 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
-import { 
-  Building2, 
-  Activity, 
-  Settings, 
-  AlertTriangle,
-  ArrowRight,
-  TrendingUp,
-  Cpu
-} from 'lucide-react'
+import Building2 from 'lucide-react/dist/esm/icons/building-2.mjs'
+import Activity from 'lucide-react/dist/esm/icons/activity.mjs'
+import Settings from 'lucide-react/dist/esm/icons/settings.mjs'
+import AlertTriangle from 'lucide-react/dist/esm/icons/triangle-alert.mjs'
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right.mjs'
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up.mjs'
+import Cpu from 'lucide-react/dist/esm/icons/cpu.mjs'
 import Panel from '@/components/design-system/Panel'
 import DataLabel from '@/components/design-system/DataLabel'
 import ScoreDigit from '@/components/design-system/ScoreDigit'
 import StatusPill from '@/components/design-system/StatusPill'
 import Button from '@/components/design-system/Button'
-import Stadium3D from '@/components/stadium/Stadium3D'
+
+const Stadium3D = React.lazy(() => import('@/components/stadium/Stadium3D'))
+
+const StadiumHeroFallback: React.FC = () => (
+  <Panel className="w-full h-full flex flex-col justify-between p-4 animate-pulse">
+    <div className="flex justify-between items-center border-b border-cyan/10 pb-2">
+      <div className="h-2 w-28 bg-cyan/20 rounded-none" />
+      <div className="h-4 w-14 bg-cyan/10 rounded-none" />
+    </div>
+    <div className="flex-1 flex items-center justify-center">
+      <div className="w-44 h-44 border border-dashed border-cyan/15 rounded-full flex items-center justify-center">
+        <div className="w-28 h-28 border border-dashed border-cyan/10 rounded-full" />
+      </div>
+    </div>
+    <div className="h-2 w-40 bg-cyan/10 rounded-none self-center" />
+  </Panel>
+)
 
 export const Overview: React.FC = () => {
   const shouldReduceMotion = useReducedMotion()
@@ -87,7 +101,9 @@ export const Overview: React.FC = () => {
 
         {/* Right Column: 3D procedural wireframe moment */}
         <div className="lg:col-span-5 h-[250px] sm:h-[320px] lg:h-auto min-h-[250px] lg:min-h-[350px] flex">
-          <Stadium3D />
+          <React.Suspense fallback={<StadiumHeroFallback />}>
+            <Stadium3D />
+          </React.Suspense>
         </div>
       </motion.section>
 

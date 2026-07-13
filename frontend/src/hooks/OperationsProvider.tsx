@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import type {
   Alert,
   DecisionLogEntry,
@@ -29,37 +29,7 @@ import {
   loginRequest
 } from '../lib/apiClient'
 import { wsClient } from '../lib/wsClient'
-
-interface OperationsContextType {
-  matches: Match[]
-  events: MatchEvent[]
-  zones: VenueZone[]
-  alerts: Alert[]
-  tournament: Tournament
-  rounds: Round[]
-  sections: StandSection[]
-  recommendations: Recommendation[]
-  decisionLog: DecisionLogEntry[]
-  geminiApiKey: string
-  loading: boolean
-  error: string | null
-  operator: OperatorProfile | null
-  isAuthenticated: boolean
-  authError: string | null
-  canMutate: boolean
-  setGeminiApiKey: (key: string) => void
-  clearGeminiApiKey: () => void
-  login: (email: string, password: string) => Promise<void>
-  logout: () => void
-  acceptRecommendation: (rec: Recommendation) => void
-  dismissRecommendation: (rec: Recommendation) => void
-  acknowledgeAlert: (id: string) => void
-  simulateNewAlert: () => void
-  toggleGate: (sectionId: string) => void
-  clearIncidents: (sectionId: string) => void
-}
-
-const OperationsContext = createContext<OperationsContextType | undefined>(undefined)
+import { OperationsContext, type OperationsContextType } from './operationsContext'
 
 const GEMINI_KEY_STORAGE = 'GEMINI_API_KEY'
 const GEMINI_KEY_SOURCE_STORAGE = 'GEMINI_API_KEY_SOURCE'
@@ -74,6 +44,7 @@ const resolveGeminiApiKey = (): string => {
   return envKey || storedKey
 }
 
+/** Provides live operations state, API actions, and WebSocket update handling to the app shell. */
 export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [matches, setMatches] = useState<Match[]>(mockMatches)
   const [events, setEvents] = useState<MatchEvent[]>(mockMatchEvents)
@@ -93,18 +64,18 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const canMutate = operator?.role === 'admin' || operator?.role === 'operator'
 
-  const setGeminiApiKey = (key: string) => {
+  const setGeminiApiKey = useCallback((key: string) => {
     const trimmed = key.trim()
     setGeminiApiKeyState(trimmed)
     localStorage.setItem(GEMINI_KEY_STORAGE, trimmed)
     localStorage.setItem(GEMINI_KEY_SOURCE_STORAGE, 'user')
-  }
+  }, [])
 
-  const clearGeminiApiKey = () => {
+  const clearGeminiApiKey = useCallback(() => {
     localStorage.removeItem(GEMINI_KEY_STORAGE)
     localStorage.removeItem(GEMINI_KEY_SOURCE_STORAGE)
     setGeminiApiKeyState(resolveGeminiApiKey())
-  }
+  }, [])
 
   const refreshRecommendations = useCallback(async () => {
     try {
@@ -193,7 +164,7 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, [refreshDecisionLog, refreshRecommendations])
 
-  const login = async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     setAuthError(null)
     try {
       const result = await loginRequest(email, password)
@@ -203,15 +174,15 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setAuthError(err instanceof Error ? err.message : 'Login failed')
       throw err
     }
-  }
+  }, [refreshSnapshot])
 
-  const logout = () => {
+  const logout = useCallback(() => {
     clearSession()
     setOperator(null)
     setDecisionLog([])
-  }
+  }, [])
 
-  const acknowledgeAlert = (id: string) => {
+  const acknowledgeAlert = useCallback((id: string) => {
     if (!canMutate) return
     apiRequest<Alert>(`/alerts/${id}/acknowledge`, { method: 'PATCH' })
       .then(alert => {
@@ -219,9 +190,9 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         void refreshRecommendations()
       })
       .catch(err => setError(err instanceof Error ? err.message : 'Unable to acknowledge alert'))
-  }
+  }, [canMutate, refreshRecommendations])
 
-  const simulateNewAlert = () => {
+  const simulateNewAlert = useCallback(() => {
     if (!canMutate) return
     apiRequest<Alert>('/alerts', {
       method: 'POST',
@@ -233,9 +204,9 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     })
       .then(alert => setAlerts(prev => [alert, ...prev]))
       .catch(err => setError(err instanceof Error ? err.message : 'Unable to create alert'))
-  }
+  }, [canMutate])
 
-  const toggleGate = (sectionId: string) => {
+  const toggleGate = useCallback((sectionId: string) => {
     if (!canMutate) return
     const section = sections.find(item => item.id === sectionId)
     if (!section) return
@@ -248,9 +219,9 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         void refreshRecommendations()
       })
       .catch(err => setError(err instanceof Error ? err.message : 'Unable to toggle gate state'))
-  }
+  }, [canMutate, refreshRecommendations, sections])
 
-  const clearIncidents = (sectionId: string) => {
+  const clearIncidents = useCallback((sectionId: string) => {
     if (!canMutate) return
     const section = sections.find(item => item.id === sectionId)
     if (!section) return
@@ -258,9 +229,18 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const sectionAlerts = alerts.filter(alert => !alert.isAcknowledged && alertMatchesSection(alert, section))
     sectionAlerts.forEach(alert => acknowledgeAlert(alert.id))
     setSections(prev => prev.map(item => (item.id === sectionId ? { ...item, incidents: 0 } : item)))
-  }
+  }, [acknowledgeAlert, alerts, canMutate, sections])
 
-  const acceptRecommendation = (rec: Recommendation) => {
+  const applyAcceptedRecommendation = useCallback((rec: Recommendation) => {
+    if (rec.id.startsWith('REC-SECTION-')) {
+      setSections(prev => prev.map(section => (section.id === rec.relatedEntityId ? { ...section, gateStatus: 'open' } : section)))
+    }
+    if (rec.id.startsWith('REC-INCIDENT-')) {
+      setAlerts(prev => prev.map(alert => (alertZoneMatches(alert, rec.relatedEntityId) ? { ...alert, isAcknowledged: true } : alert)))
+    }
+  }, [])
+
+  const acceptRecommendation = useCallback((rec: Recommendation) => {
     apiRequest<DecisionLogEntry>(`/assistant/recommendations/${rec.id}/decision`, {
       method: 'POST',
       body: JSON.stringify({ action: 'accepted', operatorId: operator?.id })
@@ -271,9 +251,9 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         applyAcceptedRecommendation(rec)
       })
       .catch(err => setError(err instanceof Error ? err.message : 'Unable to record recommendation decision'))
-  }
+  }, [applyAcceptedRecommendation, operator?.id])
 
-  const dismissRecommendation = (rec: Recommendation) => {
+  const dismissRecommendation = useCallback((rec: Recommendation) => {
     apiRequest<DecisionLogEntry>(`/assistant/recommendations/${rec.id}/decision`, {
       method: 'POST',
       body: JSON.stringify({ action: 'dismissed', operatorId: operator?.id })
@@ -283,53 +263,70 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setDismissedRecIds(prev => new Set(prev).add(rec.id))
       })
       .catch(err => setError(err instanceof Error ? err.message : 'Unable to record recommendation decision'))
-  }
-
-  const applyAcceptedRecommendation = (rec: Recommendation) => {
-    if (rec.id.startsWith('REC-SECTION-')) {
-      setSections(prev => prev.map(section => (section.id === rec.relatedEntityId ? { ...section, gateStatus: 'open' } : section)))
-    }
-    if (rec.id.startsWith('REC-INCIDENT-')) {
-      setAlerts(prev => prev.map(alert => (alertZoneMatches(alert, rec.relatedEntityId) ? { ...alert, isAcknowledged: true } : alert)))
-    }
-  }
+  }, [operator?.id])
 
   const visibleRecommendations = useMemo(
     () => recommendations.filter(rec => !dismissedRecIds.has(rec.id)),
     [dismissedRecIds, recommendations]
   )
 
+  const value = useMemo<OperationsContextType>(() => ({
+    matches,
+    events,
+    zones,
+    alerts,
+    tournament,
+    rounds,
+    sections,
+    recommendations: visibleRecommendations,
+    decisionLog,
+    geminiApiKey,
+    loading,
+    error,
+    operator,
+    isAuthenticated: Boolean(operator),
+    authError,
+    canMutate,
+    setGeminiApiKey,
+    clearGeminiApiKey,
+    login,
+    logout,
+    acceptRecommendation,
+    dismissRecommendation,
+    acknowledgeAlert,
+    simulateNewAlert,
+    toggleGate,
+    clearIncidents
+  }), [
+    acceptRecommendation,
+    acknowledgeAlert,
+    alerts,
+    authError,
+    canMutate,
+    clearGeminiApiKey,
+    clearIncidents,
+    decisionLog,
+    dismissRecommendation,
+    error,
+    events,
+    geminiApiKey,
+    loading,
+    login,
+    logout,
+    matches,
+    operator,
+    rounds,
+    sections,
+    setGeminiApiKey,
+    simulateNewAlert,
+    toggleGate,
+    tournament,
+    visibleRecommendations,
+    zones
+  ])
+
   return (
-    <OperationsContext.Provider
-      value={{
-        matches,
-        events,
-        zones,
-        alerts,
-        tournament,
-        rounds,
-        sections,
-        recommendations: visibleRecommendations,
-        decisionLog,
-        geminiApiKey,
-        loading,
-        error,
-        operator,
-        isAuthenticated: Boolean(operator),
-        authError,
-        canMutate,
-        setGeminiApiKey,
-        clearGeminiApiKey,
-        login,
-        logout,
-        acceptRecommendation,
-        dismissRecommendation,
-        acknowledgeAlert,
-        simulateNewAlert,
-        toggleGate,
-        clearIncidents
-      }}
-    >
+    <OperationsContext.Provider value={value}>
       {children}
     </OperationsContext.Provider>
   )
@@ -356,12 +353,4 @@ const alertZoneMatches = (alert: Alert, zone: string): boolean => {
     (target.includes('CONCOURSE') && message.includes('CONCOURSE')) ||
     (target.includes('CAR PARK') && message.includes('CAR PARK'))
   )
-}
-
-export const useOperations = () => {
-  const context = useContext(OperationsContext)
-  if (!context) {
-    throw new Error('useOperations must be used within an OperationsProvider')
-  }
-  return context
 }

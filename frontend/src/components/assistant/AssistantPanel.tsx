@@ -1,22 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  Sparkles,
-  Settings,
-  ChevronDown,
-  ChevronUp,
-  Check,
-  X,
-  Brain,
-  Key,
-  Cpu,
-  ShieldAlert,
-  Loader2,
-  MessageSquare,
-  Send,
-  Bot,
-  User
-} from 'lucide-react'
+import Sparkles from 'lucide-react/dist/esm/icons/sparkles.mjs'
+import Settings from 'lucide-react/dist/esm/icons/settings.mjs'
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down.mjs'
+import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up.mjs'
+import Check from 'lucide-react/dist/esm/icons/check.mjs'
+import X from 'lucide-react/dist/esm/icons/x.mjs'
+import Brain from 'lucide-react/dist/esm/icons/brain.mjs'
+import Key from 'lucide-react/dist/esm/icons/key.mjs'
+import Cpu from 'lucide-react/dist/esm/icons/cpu.mjs'
+import ShieldAlert from 'lucide-react/dist/esm/icons/shield-alert.mjs'
+import Loader2 from 'lucide-react/dist/esm/icons/loader-circle.mjs'
+import MessageSquare from 'lucide-react/dist/esm/icons/message-square.mjs'
+import Send from 'lucide-react/dist/esm/icons/send.mjs'
+import Bot from 'lucide-react/dist/esm/icons/bot.mjs'
+import User from 'lucide-react/dist/esm/icons/user.mjs'
 import { useOperations } from '@/hooks/useOperations'
 import { explainWithAI, chatWithAI, type Recommendation, type ChatMessage } from '@/lib/assistantEngine'
 import Panel from '../design-system/Panel'
@@ -267,7 +265,9 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                         Configure a Gemini API key from Google AI Studio. Keys saved here override <code className="text-cyan/80">VITE_GEMINI_API_KEY</code> in your <code className="text-cyan/80">.env</code> file.
                       </p>
                       <div className="flex gap-2 mt-1">
+                        <label htmlFor="gemini-api-key" className="sr-only">Gemini API key</label>
                         <input
+                          id="gemini-api-key"
                           type="password"
                           value={apiKeyInput}
                           onChange={(e) => setApiKeyInput(e.target.value)}
@@ -351,7 +351,6 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                           return (
                             <Panel
                               key={rec.id}
-                              aria-live={rec.priority === 'critical' ? 'assertive' : 'polite'}
                               className={`p-3 bg-elevated/45 hover:bg-elevated/65 border transition-all duration-200 ${
                                 rec.priority === 'critical'
                                   ? 'border-danger/30 hover:border-danger/60'
@@ -366,7 +365,9 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                                   <h4 className="font-mono text-[10px] font-bold text-text-primary uppercase tracking-wide leading-tight">
                                     {rec.title}
                                   </h4>
-                                  {renderPriorityPill(rec.priority)}
+                                  <span aria-live={rec.priority === 'critical' ? 'assertive' : 'polite'}>
+                                    {renderPriorityPill(rec.priority)}
+                                  </span>
                                 </div>
 
                                 {/* Brief summary fallback description */}
@@ -439,7 +440,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                                       <div className="mt-1.5 border-t border-cyan/5 pt-1.5 flex flex-col gap-1 bg-cyan/5 p-1">
                                         <div className="flex items-center gap-1 text-cyan text-[7px] font-bold uppercase tracking-wider">
                                           <Sparkles size={8} className="animate-pulse" />
-                                          <span>OPERATIONAL EXPLANATION</span>
+                                          <span>AI SUMMARY</span>
                                         </div>
                                         {isLoadingExp ? (
                                           <div className="flex items-center gap-1 text-text-muted italic py-0.5">
@@ -586,7 +587,9 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                       }}
                       className="flex gap-2"
                     >
+                      <label htmlFor="assistant-chat-input" className="sr-only">Ask the AI assistant</label>
                       <input
+                        id="assistant-chat-input"
                         type="text"
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
@@ -596,6 +599,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                       />
                       <button
                         type="submit"
+                        aria-label="Send assistant chat message"
                         disabled={!geminiApiKey || isSending || !inputValue.trim()}
                         className="p-1.5 bg-cyan/15 hover:bg-cyan/25 border border-cyan/35 hover:border-cyan text-cyan disabled:opacity-40 disabled:hover:bg-cyan/15 disabled:hover:border-cyan/35 disabled:hover:text-cyan transition-all rounded-none flex items-center justify-center"
                       >

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { ShieldCheck } from 'lucide-react'
+import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check.mjs'
 import { useOperations } from '@/hooks/useOperations'
 import Panel from '@/components/design-system/Panel'
 import Button from '@/components/design-system/Button'

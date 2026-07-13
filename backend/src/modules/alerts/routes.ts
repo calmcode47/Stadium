@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { eq } from 'drizzle-orm'
+import { and, desc, eq, type SQL } from 'drizzle-orm'
 import { z } from 'zod'
 import { getDatabase } from '../../db/client'
 import { mapAlert } from '../../db/mappers'
@@ -25,13 +25,14 @@ const createSchema = z.object({
 
 router.get('/', validate('query', listSchema), (req, res) => {
   const query = getValidatedQuery<z.infer<typeof listSchema>>(req)
-  const rows = getDatabase().db.select().from(alerts).all()
-  const filtered = rows
-    .filter(row => (query.acknowledged === undefined ? true : row.acknowledged === query.acknowledged))
-    .filter(row => (query.severity ? row.severity === query.severity : true))
-    .filter(row => (query.venueId ? row.venueId === query.venueId : true))
-    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
-    .slice(query.offset, query.offset + query.limit)
+  const filters: SQL[] = []
+  if (query.acknowledged !== undefined) filters.push(eq(alerts.acknowledged, query.acknowledged))
+  if (query.severity) filters.push(eq(alerts.severity, query.severity))
+  if (query.venueId) filters.push(eq(alerts.venueId, query.venueId))
+  const where = filters.length > 0 ? and(...filters) : undefined
+  const filtered = where
+    ? getDatabase().db.select().from(alerts).where(where).orderBy(desc(alerts.createdAt)).limit(query.limit).offset(query.offset).all()
+    : getDatabase().db.select().from(alerts).orderBy(desc(alerts.createdAt)).limit(query.limit).offset(query.offset).all()
   res.json({ data: filtered.map(mapAlert) })
 })
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Clock, ChevronDown } from 'lucide-react'
+import Clock from 'lucide-react/dist/esm/icons/clock.mjs'
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down.mjs'
 
 export const TopBar: React.FC = () => {
   const location = useLocation()
@@ -62,7 +63,9 @@ export const TopBar: React.FC = () => {
 
         {/* Venue/Tournament Selector Dropdown - Hidden on very small screens */}
         <div className="relative hidden sm:inline-block">
+          <label htmlFor="context-selector" className="sr-only">Operations context selector</label>
           <select 
+            id="context-selector"
             className="appearance-none bg-elevated border border-cyan/30 text-text-primary hover:border-cyan hover:text-cyan font-mono text-[10px] md:text-xs px-2 md:px-3 pr-7 md:pr-8 py-1.5 rounded-[2px] outline-none transition-colors duration-200 uppercase tracking-widest cursor-pointer"
             defaultValue="main-arena"
           >

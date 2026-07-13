@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Play } from 'lucide-react'
+import Play from 'lucide-react/dist/esm/icons/play.mjs'
 import type { Match } from '@/types/operations'
 import Panel from '@/components/design-system/Panel'
 import DataLabel from '@/components/design-system/DataLabel'
@@ -11,7 +11,7 @@ interface LiveMatchesPanelProps {
   matches: Match[]
 }
 
-export const LiveMatchesPanel: React.FC<LiveMatchesPanelProps> = ({ matches }) => {
+export const LiveMatchesPanel: React.FC<LiveMatchesPanelProps> = React.memo(({ matches }) => {
   const navigate = useNavigate()
   
   // Running timers for live matches to simulate tick activity
@@ -104,6 +104,6 @@ export const LiveMatchesPanel: React.FC<LiveMatchesPanelProps> = ({ matches }) =
       </div>
     </Panel>
   )
-}
+})
 
 export default LiveMatchesPanel

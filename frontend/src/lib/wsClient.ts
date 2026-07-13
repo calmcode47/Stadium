@@ -31,6 +31,7 @@ export class StadiumWsClient {
 
     this.socket.onopen = () => {
       this.reconnectAttempts = 0
+      this.sendSubscriptions()
     }
 
     this.socket.onmessage = event => {
@@ -49,8 +50,13 @@ export class StadiumWsClient {
     handlers.add(handler as Handler<unknown>)
     this.handlers.set(type, handlers)
     this.connect()
+    this.sendSubscription(type)
     return () => {
       handlers.delete(handler as Handler<unknown>)
+      if (handlers.size === 0) {
+        this.handlers.delete(type)
+        this.sendUnsubscription(type)
+      }
     }
   }
 
@@ -68,6 +74,25 @@ export class StadiumWsClient {
       this.reconnectAttempts += 1
       this.connect()
     }, delay)
+  }
+
+  private sendSubscriptions(): void {
+    for (const type of this.handlers.keys()) {
+      this.sendSubscription(type)
+    }
+  }
+
+  private sendSubscription(type: string): void {
+    this.sendControlMessage('subscribe', type)
+  }
+
+  private sendUnsubscription(type: string): void {
+    this.sendControlMessage('unsubscribe', type)
+  }
+
+  private sendControlMessage(action: 'subscribe' | 'unsubscribe', type: string): void {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return
+    this.socket.send(JSON.stringify({ action, type }))
   }
 }
 

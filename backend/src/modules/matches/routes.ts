@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { and, eq } from 'drizzle-orm'
+import { and, asc, eq, type SQL } from 'drizzle-orm'
 import { z } from 'zod'
 import { getDatabase } from '../../db/client'
 import { mapMatch, mapMatchEvent } from '../../db/mappers'
@@ -37,12 +37,14 @@ const eventSchema = z.object({
 
 router.get('/', validate('query', listSchema), (req, res) => {
   const query = getValidatedQuery<z.infer<typeof listSchema>>(req)
-  const rows = getDatabase().db.select().from(matches).all()
-  const filtered = rows
-    .filter(row => (query.status ? row.status === query.status : true))
-    .filter(row => (query.venueId ? row.venueId === query.venueId : true))
-    .filter(row => (query.tournamentId ? row.tournamentId === query.tournamentId : true))
-    .slice(query.offset, query.offset + query.limit)
+  const filters: SQL[] = []
+  if (query.status) filters.push(eq(matches.status, query.status))
+  if (query.venueId) filters.push(eq(matches.venueId, query.venueId))
+  if (query.tournamentId) filters.push(eq(matches.tournamentId, query.tournamentId))
+  const where = filters.length > 0 ? and(...filters) : undefined
+  const filtered = where
+    ? getDatabase().db.select().from(matches).where(where).limit(query.limit).offset(query.offset).all()
+    : getDatabase().db.select().from(matches).limit(query.limit).offset(query.offset).all()
 
   res.json({ data: filtered.map(mapMatch) })
 })
@@ -52,7 +54,7 @@ router.get('/:id', validate('params', paramsSchema), (req, res, next) => {
     const { id } = req.params as unknown as z.infer<typeof paramsSchema>
     const row = getDatabase().db.select().from(matches).where(eq(matches.id, id)).get()
     if (!row) throw notFound('Match not found')
-    const events = getDatabase().db.select().from(matchEvents).where(eq(matchEvents.matchId, row.id)).all()
+    const events = getDatabase().db.select().from(matchEvents).where(eq(matchEvents.matchId, row.id)).orderBy(asc(matchEvents.createdAt)).all()
     res.json({ data: { ...mapMatch(row), events: events.map(mapMatchEvent) } })
   } catch (error) {
     next(error)

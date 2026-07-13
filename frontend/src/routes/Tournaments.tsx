@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Trophy, CalendarRange, FilterX } from 'lucide-react'
+import Trophy from 'lucide-react/dist/esm/icons/trophy.mjs'
+import CalendarRange from 'lucide-react/dist/esm/icons/calendar-range.mjs'
+import FilterX from 'lucide-react/dist/esm/icons/filter-x.mjs'
 import { useOperations } from '@/hooks/useOperations'
 import type { Round } from '@/types/operations'
 import Panel from '@/components/design-system/Panel'
@@ -13,7 +15,8 @@ export const Tournaments: React.FC = () => {
   const { rounds } = useOperations()
   const [activeTab, setActiveTab] = useState<'bracket' | 'schedule'>('bracket')
   const [selectedRound, setSelectedRound] = useState<'all' | '1' | '2' | '3'>('all')
-  const [selectedVenue, setSelectedVenue] = useState<'all' | 'main' | 'east' | 'west'>('all')
+  type VenueFilter = 'all' | 'main' | 'east' | 'west'
+  const [selectedVenue, setSelectedVenue] = useState<VenueFilter>('all')
 
   const resetFilters = () => {
     setSelectedRound('all')
@@ -25,6 +28,12 @@ export const Tournaments: React.FC = () => {
     main: 'MAIN VENUE Arena',
     east: 'EAST PRACTICE DOME',
     west: 'WEST CUP Arena'
+  }
+
+  const handleVenueChange = (value: string) => {
+    if (value === 'all' || value === 'main' || value === 'east' || value === 'west') {
+      setSelectedVenue(value)
+    }
   }
 
   // Apply filtering logic to rounds and matches
@@ -138,9 +147,11 @@ export const Tournaments: React.FC = () => {
         <div className="flex items-center gap-3">
           <DataLabel>VENUE SECTOR:</DataLabel>
           <div className="relative inline-block min-w-[160px]">
+            <label htmlFor="venue-filter" className="sr-only">Venue sector filter</label>
             <select
+              id="venue-filter"
               value={selectedVenue}
-              onChange={(e) => setSelectedVenue(e.target.value as any)}
+              onChange={(e) => handleVenueChange(e.target.value)}
               className="appearance-none w-full bg-elevated border border-cyan/30 text-text-primary hover:border-cyan hover:text-cyan font-mono text-xs px-3 pr-8 py-1.5 rounded-[2px] outline-none transition-colors duration-150 uppercase tracking-widest cursor-pointer"
             >
               <option value="all">ALL STADIUM ARENAS</option>

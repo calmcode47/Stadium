@@ -18,8 +18,9 @@ const gateLockSchema = z.object({ gateLocked: z.boolean().optional(), locked: z.
 
 router.get('/', validate('query', listSchema), (req, res) => {
   const query = getValidatedQuery<z.infer<typeof listSchema>>(req)
-  const rows = getDatabase().db.select().from(venues).all().filter(row => (query.kind ? row.kind === query.kind : true))
-  const page = rows.slice(query.offset, query.offset + query.limit)
+  const page = query.kind
+    ? getDatabase().db.select().from(venues).where(eq(venues.kind, query.kind)).limit(query.limit).offset(query.offset).all()
+    : getDatabase().db.select().from(venues).limit(query.limit).offset(query.offset).all()
   res.json({
     data: {
       zones: page.filter(row => row.kind === 'zone').map(mapVenueZone),

@@ -4,6 +4,7 @@ import { mockMatches, mockMatchEvents } from '@/mocks/operationsData'
 import { apiRequest } from '@/lib/apiClient'
 import { wsClient } from '@/lib/wsClient'
 
+/** Loads live match data and keeps it synchronized with backend match WebSocket updates. */
 export const useLiveMatchSimulator = () => {
   const [matches, setMatches] = useState<Match[]>(mockMatches)
   const [events, setEvents] = useState<MatchEvent[]>(mockMatchEvents)
