@@ -2,3 +2,8 @@
 .env
 .env.*
 !.env.example
+
+# Local OS/tooling artifacts
+.DS_Store
+.netlify/
+frontend/.netlify/

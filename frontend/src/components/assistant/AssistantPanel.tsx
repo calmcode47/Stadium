@@ -162,19 +162,21 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
       {/* 1. COLLAPSED VERTICAL RAIL (always visible on screen right when panel is closed) */}
       <AnimatePresence>
         {!isOpen && (
-          <motion.div
+          <motion.button
+            type="button"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
             transition={{ duration: 0.2 }}
             onClick={onToggle}
-            className="fixed right-0 top-14 md:top-16 bottom-16 md:bottom-0 w-12 bg-surface/95 border-l border-cyan/20 backdrop-blur-md hidden md:flex flex-col items-center py-6 cursor-pointer hover:bg-elevated/40 transition-colors duration-150 select-none group"
+            aria-label={`Open Operations Assistant (${recommendations.length} active recommendations)`}
+            className="fixed right-0 top-14 md:top-16 bottom-16 md:bottom-0 w-12 bg-surface/95 border-l border-cyan/20 backdrop-blur-md hidden md:flex flex-col items-center py-6 cursor-pointer hover:bg-elevated/40 transition-colors duration-150 select-none group focus:outline-none focus:ring-2 focus:ring-cyan focus:ring-offset-2 focus:ring-offset-base"
           >
             {/* Brain pulsing indicator */}
             <div className="relative flex items-center justify-center w-8 h-8 rounded-none border border-cyan/35 mb-6 group-hover:border-cyan transition-colors">
               <Brain size={14} className="text-cyan animate-pulse" />
               {recommendations.length > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-danger text-white font-mono text-[8px] font-bold px-1 min-w-[14px] h-[14px] flex items-center justify-center rounded-full border border-base">
+                <span className="absolute -top-1.5 -right-1.5 bg-danger text-base font-mono text-[8px] font-bold px-1 min-w-[14px] h-[14px] flex items-center justify-center rounded-full border border-base">
                   {recommendations.length}
                 </span>
               )}
@@ -188,7 +190,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
             </div>
 
             <Cpu size={12} className="text-text-muted/40 mt-auto" />
-          </motion.div>
+          </motion.button>
         )}
       </AnimatePresence>
 

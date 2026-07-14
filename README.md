@@ -2,6 +2,12 @@
 
 Built for stadium operations staff and control-room operators who need fast, explainable decisions during live events.
 
+## Live Deployment
+- Frontend: [https://stadium-frontend.netlify.app/](https://stadium-frontend.netlify.app/)
+- Backend API health: [https://stadium-backend-production.up.railway.app/api/health](https://stadium-backend-production.up.railway.app/api/health)
+- Backend API base URL: `https://stadium-backend-production.up.railway.app/api`
+- Backend WebSocket URL: `wss://stadium-backend-production.up.railway.app/ws`
+
 ## 1. Chosen Vertical
 This application is designed for stadium/venue operations and tournament management. The solution is built around the persona of on-site operations staff and event control-room operators. These users require rapid situational awareness, high-density telemetry, and prioritized, explainable recommendations during live events to manage crowd congestion, security incidents, match delays, and tournament progression.
 
@@ -172,8 +178,9 @@ Frontend variables are documented in `frontend/.env.example`:
 ### Deployment Notes
 - Netlify is configured with `base = "frontend"`, `command = "npm run build"`, and `publish = "frontend/dist"` in `netlify.toml`.
 - Railway is configured for the backend service with Nixpacks and starts `node dist/src/server.js`.
-- The backend CORS origin is read from `FRONTEND_ORIGIN`; production should use the exact deployed Netlify URL.
-- The frontend WebSocket client reads `VITE_WS_URL`; production should use the Railway backend WebSocket endpoint over `wss://`.
+- The backend CORS origin is read from `FRONTEND_ORIGIN`; production uses the exact deployed Netlify URL: `https://stadium-frontend.netlify.app`.
+- The frontend API client reads `VITE_API_BASE_URL`; production uses `https://stadium-backend-production.up.railway.app/api`.
+- The frontend WebSocket client reads `VITE_WS_URL`; production uses `wss://stadium-backend-production.up.railway.app/ws`.
 - If Railway cold-starts the backend, the frontend shows loading/error states and then falls back to last-known demo data instead of rendering a blank screen.
 
 ### Execute Test Suites

@@ -111,7 +111,7 @@ export const AlertsFeedPanel: React.FC<AlertsFeedPanelProps> = React.memo(({
                       >
                         {alert.level}
                       </span>
-                      <span className="text-text-muted">{alert.timestamp}</span>
+                      <span className="text-text-primary">{alert.timestamp}</span>
                     </div>
                     {/* Message Body */}
                     <p className="text-text-primary text-[11px] leading-relaxed break-words pr-2">
@@ -123,7 +123,7 @@ export const AlertsFeedPanel: React.FC<AlertsFeedPanelProps> = React.memo(({
                   {!alert.isAcknowledged && onAcknowledgeAlert && (
                     <button
                       onClick={() => onAcknowledgeAlert(alert.id)}
-                      className="text-[9px] font-mono text-text-muted hover:text-cyan border border-cyan/10 hover:border-cyan/35 px-1 py-0.5 select-none shrink-0"
+                      className="text-[9px] font-mono text-cyan hover:text-base border border-cyan/35 hover:border-cyan hover:bg-cyan px-1 py-0.5 select-none shrink-0"
                     >
                       ACK
                     </button>
