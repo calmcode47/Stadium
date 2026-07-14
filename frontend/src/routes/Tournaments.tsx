@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import Trophy from 'lucide-react/dist/esm/icons/trophy.mjs'
 import CalendarRange from 'lucide-react/dist/esm/icons/calendar-range.mjs'
 import FilterX from 'lucide-react/dist/esm/icons/filter-x.mjs'
@@ -12,6 +12,7 @@ import BracketView from '@/components/tournaments/BracketView'
 import ScheduleView from '@/components/tournaments/ScheduleView'
 
 export const Tournaments: React.FC = () => {
+  const shouldReduceMotion = useReducedMotion()
   const { rounds } = useOperations()
   const [activeTab, setActiveTab] = useState<'bracket' | 'schedule'>('bracket')
   const [selectedRound, setSelectedRound] = useState<'all' | '1' | '2' | '3'>('all')
@@ -77,7 +78,7 @@ export const Tournaments: React.FC = () => {
         <div className="flex items-center gap-1 sm:gap-2 bg-surface/50 border border-cyan/15 p-1 rounded-[2px] self-start flex-wrap">
           <button
             onClick={() => setActiveTab('bracket')}
-            className={`flex items-center gap-2 px-3 py-1.5 font-mono text-xs tracking-wider uppercase transition-colors duration-100 rounded-[2px] ${
+            className={`flex items-center gap-2 min-h-11 px-3 py-1.5 font-mono text-xs tracking-wider uppercase transition-colors duration-100 rounded-[2px] ${
               activeTab === 'bracket'
                 ? 'bg-cyan text-base font-semibold'
                 : 'text-text-muted hover:text-text-primary'
@@ -89,7 +90,7 @@ export const Tournaments: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('schedule')}
-            className={`flex items-center gap-2 px-3 py-1.5 font-mono text-xs tracking-wider uppercase transition-colors duration-100 rounded-[2px] ${
+            className={`flex items-center gap-2 min-h-11 px-3 py-1.5 font-mono text-xs tracking-wider uppercase transition-colors duration-100 rounded-[2px] ${
               activeTab === 'schedule'
                 ? 'bg-cyan text-base font-semibold'
                 : 'text-text-muted hover:text-text-primary'
@@ -116,28 +117,28 @@ export const Tournaments: React.FC = () => {
           <Button
             variant={selectedRound === 'all' ? 'primary' : 'secondary'}
             onClick={() => setSelectedRound('all')}
-            className="py-1 px-2.5 text-[9px] font-mono h-7"
+            className="py-1 px-2.5 text-[9px] font-mono"
           >
             ALL STAGES
           </Button>
           <Button
             variant={selectedRound === '1' ? 'primary' : 'secondary'}
             onClick={() => setSelectedRound('1')}
-            className="py-1 px-2.5 text-[9px] font-mono h-7"
+            className="py-1 px-2.5 text-[9px] font-mono"
           >
             QUARTERFINALS
           </Button>
           <Button
             variant={selectedRound === '2' ? 'primary' : 'secondary'}
             onClick={() => setSelectedRound('2')}
-            className="py-1 px-2.5 text-[9px] font-mono h-7"
+            className="py-1 px-2.5 text-[9px] font-mono"
           >
             SEMIFINALS
           </Button>
           <Button
             variant={selectedRound === '3' ? 'primary' : 'secondary'}
             onClick={() => setSelectedRound('3')}
-            className="py-1 px-2.5 text-[9px] font-mono h-7"
+            className="py-1 px-2.5 text-[9px] font-mono"
           >
             FINALS
           </Button>
@@ -170,9 +171,9 @@ export const Tournaments: React.FC = () => {
       {/* 3. Main Operational Content Outlet (Fast 100ms fade-in) */}
       <motion.div
         key={`${activeTab}-${selectedRound}-${selectedVenue}`}
-        initial={{ opacity: 0 }}
+        initial={shouldReduceMotion ? false : { opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.1 }}
+        transition={{ duration: shouldReduceMotion ? 0 : 0.1 }}
         className="w-full"
       >
         {totalFilteredMatches === 0 ? (
@@ -188,7 +189,7 @@ export const Tournaments: React.FC = () => {
             <Button 
               variant="secondary" 
               onClick={resetFilters}
-              className="mt-4 py-1.5 px-3 text-[10px] font-mono h-8"
+              className="mt-4 py-1.5 px-3 text-[10px] font-mono"
             >
               RESET MATRIX FILTERS
             </Button>

@@ -11,7 +11,8 @@ export const Button: React.FC<ButtonProps> = ({
   className = '',
   ...props
 }) => {
-  const baseStyles = 'inline-flex items-center justify-center px-4 py-2 font-mono text-xs tracking-wider uppercase font-semibold transition-colors duration-200 focus:outline-none select-none rounded-[2px]'
+  // min-h/min-w keep a ~44px touch target without forcing oversized visuals on dense panels
+  const baseStyles = 'inline-flex items-center justify-center min-h-11 min-w-11 px-4 py-2 font-mono text-xs tracking-wider uppercase font-semibold transition-colors duration-200 focus:outline-none select-none rounded-[2px]'
 
   const variantStyles = {
     primary: 'bg-cyan text-base border border-cyan hover:bg-transparent hover:text-cyan',

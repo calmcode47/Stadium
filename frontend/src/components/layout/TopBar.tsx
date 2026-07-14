@@ -43,11 +43,11 @@ export const TopBar: React.FC = () => {
   }
 
   return (
-    <header className="h-14 md:h-16 bg-surface border-b border-cyan/20 px-3 md:px-8 flex items-center justify-between z-30 select-none gap-2">
+    <header className="min-h-14 md:min-h-16 bg-surface border-b border-cyan/20 px-3 md:px-8 flex flex-wrap items-center justify-between z-30 select-none gap-2 py-2">
       
-      {/* View Title */}
-      <div className="flex items-center gap-3 min-w-0">
-        <h1 className="text-base sm:text-xl md:text-2xl font-display uppercase tracking-wider text-text-primary truncate">
+      {/* View Title — wraps under zoom instead of clipping in a fixed-height bar */}
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <h1 className="text-base sm:text-xl md:text-2xl font-display uppercase tracking-wider text-text-primary break-words">
           {getPageTitle(location.pathname)}
         </h1>
       </div>
@@ -66,7 +66,7 @@ export const TopBar: React.FC = () => {
           <label htmlFor="context-selector" className="sr-only">Operations context selector</label>
           <select 
             id="context-selector"
-            className="appearance-none bg-elevated border border-cyan/30 text-text-primary hover:border-cyan hover:text-cyan font-mono text-[10px] md:text-xs px-2 md:px-3 pr-7 md:pr-8 py-1.5 rounded-[2px] outline-none transition-colors duration-200 uppercase tracking-widest cursor-pointer"
+            className="appearance-none bg-elevated border border-cyan/30 text-text-primary hover:border-cyan hover:text-cyan font-mono text-[10px] md:text-xs px-2 md:px-3 pr-7 md:pr-8 py-1.5 min-h-11 rounded-[2px] outline-none transition-colors duration-200 uppercase tracking-widest cursor-pointer"
             defaultValue="main-arena"
           >
             <option value="main-arena">MAIN VENUE Arena</option>

@@ -76,15 +76,18 @@
   }
 }
 
-/* Reduced motion media query block */
+/* Reduced motion: snap every CSS animation/transition off (Framer Motion still needs useReducedMotion). */
 @media (prefers-reduced-motion: reduce) {
-  * {
-    animation-delay: -1ms !important;
-    animation-duration: 1ms !important;
-    animation-iteration-count: 1 !important;
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    animation-delay: 0s !important;
+    animation-duration: 0s !important;
+    transition: none !important;
+    transition-delay: 0s !important;
+    transition-duration: 0s !important;
     background-attachment: initial !important;
     scroll-behavior: auto !important;
-    transition-duration: 0s !important;
-    transition-delay: 0s !important;
   }
 }

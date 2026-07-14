@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import Sparkles from 'lucide-react/dist/esm/icons/sparkles.mjs'
 import Settings from 'lucide-react/dist/esm/icons/settings.mjs'
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down.mjs'
@@ -15,6 +15,10 @@ import MessageSquare from 'lucide-react/dist/esm/icons/message-square.mjs'
 import Send from 'lucide-react/dist/esm/icons/send.mjs'
 import Bot from 'lucide-react/dist/esm/icons/bot.mjs'
 import User from 'lucide-react/dist/esm/icons/user.mjs'
+import OctagonAlert from 'lucide-react/dist/esm/icons/octagon-alert.mjs'
+import TriangleAlert from 'lucide-react/dist/esm/icons/triangle-alert.mjs'
+import Info from 'lucide-react/dist/esm/icons/info.mjs'
+import Minus from 'lucide-react/dist/esm/icons/minus.mjs'
 import { useOperations } from '@/hooks/useOperations'
 import { explainWithAI, chatWithAI, type Recommendation, type ChatMessage } from '@/lib/assistantEngine'
 import Panel from '../design-system/Panel'
@@ -27,6 +31,7 @@ interface AssistantPanelProps {
 }
 
 export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle }) => {
+  const shouldReduceMotion = useReducedMotion()
   const {
     recommendations,
     acceptRecommendation,
@@ -61,9 +66,11 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
   // Scroll to bottom when messages update
   useEffect(() => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+      messagesEndRef.current.scrollIntoView({
+        behavior: shouldReduceMotion ? 'auto' : 'smooth'
+      })
     }
-  }, [messages, activeTab])
+  }, [messages, activeTab, shouldReduceMotion])
 
   // Update local input if context api key changes
   useEffect(() => {
@@ -133,25 +140,26 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
     }
   }
 
-  // Priority Pill Helper (replicates StatusPill styles but for priorities)
+  // Priority Pill Helper — text + distinct icon so priority is never color-only
   const renderPriorityPill = (priority: Recommendation['priority']) => {
     const styles = {
-      critical: 'border-danger text-danger bg-danger/10 dot-danger',
-      high: 'border-amber text-amber bg-amber/10 dot-amber',
-      medium: 'border-cyan text-cyan bg-cyan/10 dot-cyan',
-      low: 'border-text-muted/40 text-text-muted bg-text-muted/5 dot-muted'
+      critical: 'border-danger text-danger bg-danger/10',
+      high: 'border-amber text-amber bg-amber/10',
+      medium: 'border-cyan text-cyan bg-cyan/10',
+      low: 'border-text-muted/40 text-text-muted bg-text-muted/5'
     }
 
-    const dotColors = {
-      critical: 'bg-danger',
-      high: 'bg-amber',
-      medium: 'bg-cyan',
-      low: 'bg-text-muted/60'
+    const icons = {
+      critical: OctagonAlert,
+      high: TriangleAlert,
+      medium: Info,
+      low: Minus
     }
+    const Icon = icons[priority]
 
     return (
       <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 border font-mono text-[9px] tracking-wider uppercase font-semibold select-none rounded-none ${styles[priority]}`}>
-        <span className={`w-1 h-1 inline-block ${dotColors[priority]}`} />
+        <Icon size={9} className="shrink-0" aria-hidden="true" />
         <span>{priority}</span>
       </div>
     )
@@ -164,10 +172,10 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
         {!isOpen && (
           <motion.button
             type="button"
-            initial={{ opacity: 0, x: 20 }}
+            initial={shouldReduceMotion ? false : { opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.2 }}
+            exit={shouldReduceMotion ? undefined : { opacity: 0, x: 20 }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
             onClick={onToggle}
             aria-label={`Open Operations Assistant (${recommendations.length} active recommendations)`}
             className="fixed right-0 top-14 md:top-16 bottom-16 md:bottom-0 w-12 bg-surface/95 border-l border-cyan/20 backdrop-blur-md hidden md:flex flex-col items-center py-6 cursor-pointer hover:bg-elevated/40 transition-colors duration-150 select-none group focus:outline-none focus:ring-2 focus:ring-cyan focus:ring-offset-2 focus:ring-offset-base"
@@ -200,18 +208,19 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
           <>
             {/* Backdrop overlay for mobile */}
             <motion.div
-              initial={{ opacity: 0 }}
+              initial={shouldReduceMotion ? false : { opacity: 0 }}
               animate={{ opacity: 0.3 }}
-              exit={{ opacity: 0 }}
+              exit={shouldReduceMotion ? undefined : { opacity: 0 }}
+              transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
               onClick={onToggle}
               className="fixed inset-0 bg-black z-30 md:hidden"
             />
 
             <motion.div
-              initial={{ x: '100%' }}
+              initial={shouldReduceMotion ? false : { x: '100%' }}
               animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'tween', ease: 'easeOut', duration: 0.25 }}
+              exit={shouldReduceMotion ? undefined : { x: '100%' }}
+              transition={{ type: 'tween', ease: 'easeOut', duration: shouldReduceMotion ? 0 : 0.25 }}
               className="fixed right-0 top-0 bottom-0 w-full max-w-[380px] bg-surface/98 border-l border-cyan/25 backdrop-blur-lg z-40 shadow-2xl flex flex-col p-4 md:p-5 select-none"
             >
               {/* Header Panel */}
@@ -221,9 +230,9 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                     <Brain size={16} className="text-cyan animate-pulse" />
                   </div>
                   <div>
-                    <h3 className="font-display text-sm tracking-wider uppercase text-text-primary">
+                    <h2 className="font-display text-sm tracking-wider uppercase text-text-primary">
                       Operations Assistant
-                    </h3>
+                    </h2>
                     <span className="font-mono text-[8px] text-text-muted tracking-widest uppercase">
                       Core Decision Engine v1.0
                     </span>
@@ -233,7 +242,8 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => setShowSettings(!showSettings)}
-                    className={`p-1.5 border border-cyan/15 hover:border-cyan text-text-muted hover:text-cyan transition-colors rounded-none ${
+                    aria-label="Gemini API Key Settings"
+                    className={`min-h-11 min-w-11 inline-flex items-center justify-center border border-cyan/15 hover:border-cyan text-text-muted hover:text-cyan transition-colors rounded-none ${
                       showSettings ? 'bg-cyan/15 border-cyan text-cyan' : ''
                     }`}
                     title="Gemini API Key Settings"
@@ -242,7 +252,8 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                   </button>
                   <button
                     onClick={onToggle}
-                    className="p-1.5 border border-cyan/15 hover:border-cyan text-text-muted hover:text-cyan transition-colors rounded-none"
+                    aria-label="Close Operations Assistant"
+                    className="min-h-11 min-w-11 inline-flex items-center justify-center border border-cyan/15 hover:border-cyan text-text-muted hover:text-cyan transition-colors rounded-none"
                   >
                     <X size={13} />
                   </button>
@@ -253,9 +264,10 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
               <AnimatePresence>
                 {showSettings && (
                   <motion.div
-                    initial={{ height: 0, opacity: 0 }}
+                    initial={shouldReduceMotion ? false : { height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
+                    exit={shouldReduceMotion ? undefined : { height: 0, opacity: 0 }}
+                    transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
                     className="flex-shrink-0 overflow-hidden border-b border-cyan/15 bg-base/30"
                   >
                     <form onSubmit={handleSaveApiKey} className="p-3 flex flex-col gap-2 font-mono text-[9px]">
@@ -276,13 +288,13 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                           placeholder="AIzaSy... or AQ...."
                           className="flex-grow bg-elevated border border-cyan/30 text-text-primary px-2.5 py-1.5 rounded-[2px] outline-none hover:border-cyan focus:border-cyan transition-colors"
                         />
-                        <Button type="submit" variant="primary" className="py-1 px-3 text-[9px] h-auto">
+                        <Button type="submit" variant="primary" className="py-2 px-3 text-[9px]">
                           SAVE
                         </Button>
                         <Button
                           type="button"
                           variant="secondary"
-                          className="py-1 px-3 text-[9px] h-auto"
+                          className="py-2 px-3 text-[9px]"
                           onClick={handleClearApiKey}
                         >
                           RESET
@@ -297,7 +309,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
               <div className="flex border-b border-cyan/15 bg-base/10 mt-2 select-none">
                 <button
                   onClick={() => setActiveTab('dispatches')}
-                  className={`flex-1 py-2 font-mono text-[9px] tracking-wider uppercase font-semibold text-center border-b-2 transition-all ${
+                  className={`flex-1 min-h-11 py-2 font-mono text-[9px] tracking-wider uppercase font-semibold text-center border-b-2 transition-all ${
                     activeTab === 'dispatches'
                       ? 'border-cyan text-cyan bg-cyan/5'
                       : 'border-transparent text-text-muted hover:text-text-primary'
@@ -307,7 +319,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                 </button>
                 <button
                   onClick={() => setActiveTab('chat')}
-                  className={`flex-1 py-2 font-mono text-[9px] tracking-wider uppercase font-semibold text-center border-b-2 transition-all flex items-center justify-center gap-1.5 ${
+                  className={`flex-1 min-h-11 py-2 font-mono text-[9px] tracking-wider uppercase font-semibold text-center border-b-2 transition-all flex items-center justify-center gap-1.5 ${
                     activeTab === 'chat'
                       ? 'border-cyan text-cyan bg-cyan/5'
                       : 'border-transparent text-text-muted hover:text-text-primary'
@@ -345,14 +357,24 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                       </div>
                     ) : (
                       <div className="flex flex-col gap-3">
-                        {recommendations.map(rec => {
+                        {recommendations.map((rec, recIndex) => {
                           const isExpanded = expandedRecId === rec.id
                           const explanation = aiExplanations[rec.id]
                           const isLoadingExp = loadingExplanations[rec.id]
+                          const isNewest = recIndex === 0
 
                           return (
-                            <Panel
+                            <motion.div
                               key={rec.id}
+                              initial={
+                                isNewest && !shouldReduceMotion
+                                  ? { opacity: 0, y: -8 }
+                                  : false
+                              }
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: shouldReduceMotion ? 0 : 0.25 }}
+                            >
+                            <Panel
                               className={`p-3 bg-elevated/45 hover:bg-elevated/65 border transition-all duration-200 ${
                                 rec.priority === 'critical'
                                   ? 'border-danger/30 hover:border-danger/60'
@@ -364,9 +386,9 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                               <div className="flex flex-col gap-2">
                                 {/* Title & Priority Row */}
                                 <div className="flex justify-between items-start gap-2">
-                                  <h4 className="font-mono text-[10px] font-bold text-text-primary uppercase tracking-wide leading-tight">
+                                  <h3 className="font-mono text-[10px] font-bold text-text-primary uppercase tracking-wide leading-tight">
                                     {rec.title}
-                                  </h4>
+                                  </h3>
                                   <span aria-live={rec.priority === 'critical' ? 'assertive' : 'polite'}>
                                     {renderPriorityPill(rec.priority)}
                                   </span>
@@ -378,11 +400,11 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                                 </p>
 
                                 {/* Dropdown triggers */}
-                                <div className="flex items-center justify-between border-t border-cyan/5 pt-1.5 mt-1">
+                                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-cyan/5 pt-1.5 mt-1">
                                   <button
                                     onClick={() => handleToggleExpand(rec)}
                                     aria-label={`${isExpanded ? 'Hide' : 'Expand'} reasoning for ${rec.title}`}
-                                    className="flex items-center gap-1 font-mono text-[8px] text-cyan hover:text-text-primary transition-colors uppercase tracking-wider"
+                                    className="min-h-11 inline-flex items-center gap-1 px-2 font-mono text-[8px] text-cyan hover:text-text-primary transition-colors uppercase tracking-wider"
                                   >
                                     {isExpanded ? (
                                       <>
@@ -403,7 +425,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                                       onClick={() => acceptRecommendation(rec)}
                                       aria-label={`Accept recommendation: ${rec.title}`}
                                       disabled={!isAuthenticated}
-                                      className="flex items-center gap-1 px-2 py-0.5 bg-success/15 hover:bg-success/25 border border-success/45 hover:border-success text-success font-mono text-[8px] font-bold transition-all uppercase tracking-wider"
+                                      className="min-h-11 min-w-11 inline-flex items-center justify-center gap-1 px-3 bg-success/15 hover:bg-success/25 border border-success/45 hover:border-success text-success font-mono text-[8px] font-bold transition-all uppercase tracking-wider"
                                     >
                                       <Check size={8} />
                                       <span>Accept</span>
@@ -412,7 +434,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                                       onClick={() => dismissRecommendation(rec)}
                                       aria-label={`Dismiss recommendation: ${rec.title}`}
                                       disabled={!isAuthenticated}
-                                      className="flex items-center gap-1 px-2 py-0.5 bg-base hover:bg-danger/10 border border-cyan/15 hover:border-danger/40 text-text-muted hover:text-danger font-mono text-[8px] transition-all uppercase tracking-wider"
+                                      className="min-h-11 min-w-11 inline-flex items-center justify-center gap-1 px-3 bg-base hover:bg-danger/10 border border-cyan/15 hover:border-danger/40 text-text-muted hover:text-danger font-mono text-[8px] transition-all uppercase tracking-wider"
                                     >
                                       <X size={8} />
                                       <span>Dismiss</span>
@@ -424,9 +446,10 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                                 <AnimatePresence>
                                   {isExpanded && (
                                     <motion.div
-                                      initial={{ height: 0, opacity: 0 }}
+                                      initial={shouldReduceMotion ? false : { height: 0, opacity: 0 }}
                                       animate={{ height: 'auto', opacity: 1 }}
-                                      exit={{ height: 0, opacity: 0 }}
+                                      exit={shouldReduceMotion ? undefined : { height: 0, opacity: 0 }}
+                                      transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
                                       className="overflow-hidden bg-base/40 border border-cyan/5 p-2 flex flex-col gap-2 font-mono text-[8px] leading-normal"
                                     >
                                       <div className="text-[7px] text-cyan/70 font-semibold uppercase tracking-widest border-b border-cyan/5 pb-1">
@@ -465,6 +488,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                                 </AnimatePresence>
                               </div>
                             </Panel>
+                            </motion.div>
                           )
                         })}
                       </div>
@@ -506,7 +530,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                               <button
                                 key={idx}
                                 onClick={() => handleSendMessage(suggestion)}
-                                className="text-left font-mono text-[9px] px-2.5 py-1.5 border border-cyan/15 hover:border-cyan/50 text-text-muted hover:text-cyan bg-elevated/45 hover:bg-cyan/5 transition-all select-none uppercase"
+                                className="text-left min-h-11 font-mono text-[9px] px-2.5 py-2 border border-cyan/15 hover:border-cyan/50 text-text-muted hover:text-cyan bg-elevated/45 hover:bg-cyan/5 transition-all select-none uppercase"
                               >
                                 {suggestion}
                               </button>
@@ -597,13 +621,13 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                         onChange={(e) => setInputValue(e.target.value)}
                         placeholder={geminiApiKey ? "Ask the assistant..." : "Configure API key to chat"}
                         disabled={!geminiApiKey || isSending}
-                        className="flex-grow bg-elevated border border-cyan/20 text-text-primary font-mono text-[10px] px-2.5 py-1.5 rounded-[2px] outline-none hover:border-cyan/50 focus:border-cyan disabled:opacity-50 transition-colors"
+                        className="flex-grow bg-elevated border border-cyan/20 text-text-primary font-mono text-[10px] px-2.5 py-1.5 min-h-11 rounded-[2px] outline-none hover:border-cyan/50 focus:border-cyan disabled:opacity-50 transition-colors"
                       />
                       <button
                         type="submit"
                         aria-label="Send assistant chat message"
                         disabled={!geminiApiKey || isSending || !inputValue.trim()}
-                        className="p-1.5 bg-cyan/15 hover:bg-cyan/25 border border-cyan/35 hover:border-cyan text-cyan disabled:opacity-40 disabled:hover:bg-cyan/15 disabled:hover:border-cyan/35 disabled:hover:text-cyan transition-all rounded-none flex items-center justify-center"
+                        className="min-h-11 min-w-11 bg-cyan/15 hover:bg-cyan/25 border border-cyan/35 hover:border-cyan text-cyan disabled:opacity-40 disabled:hover:bg-cyan/15 disabled:hover:border-cyan/35 disabled:hover:text-cyan transition-all rounded-none flex items-center justify-center"
                       >
                         <Send size={12} />
                       </button>

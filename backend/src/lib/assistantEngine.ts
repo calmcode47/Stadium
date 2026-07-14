@@ -43,7 +43,11 @@ const priorityWeight: Record<Recommendation['priority'], number> = {
 
 const slug = (input: string): string => input.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toUpperCase()
 
-/** Evaluates crowd egress risk from live-match timing, zone occupancy, and locked stand exits. */
+/**
+ * Evaluates crowd egress risk from live-match timing, zone occupancy, and locked stand exits.
+ * Complexity: O(M + Z·M_near + S·M_near) — one linear pass over matches, then emit per congested
+ * zone/section × near-end live match. Output size is Θ(Z·M_near + S·M_near); no hidden O(n²) beyond necessary pairing.
+ */
 export const evaluateGateCongestion = (
   matches: Match[],
   zones: VenueZone[],
@@ -101,7 +105,11 @@ export const evaluateGateCongestion = (
   return [...zoneRecommendations, ...sectionRecommendations]
 }
 
-/** Evaluates same-venue schedule risk and weights priority by the gap to the next scheduled match. */
+/**
+ * Evaluates same-venue schedule risk and weights priority by the gap to the next scheduled match.
+ * Complexity: O(M + Σ_v (D_v·S_v)) — group matches by venue in O(M), then intentionally emit one
+ * recommendation per (delayed, scheduled) pair at that venue (output Θ(D·S)); not flattenable without changing output.
+ */
 export const evaluateMatchDelayRisk = (rounds: Round[]): Recommendation[] => {
   const allMatches = rounds.flatMap(round => round.matches)
   const byVenue = new Map<string, typeof allMatches>()
@@ -151,7 +159,11 @@ export const evaluateMatchDelayRisk = (rounds: Round[]): Recommendation[] => {
   return recommendations
 }
 
-/** Evaluates unresolved alert clusters by venue keyword, severity, and incident recency. */
+/**
+ * Evaluates unresolved alert clusters by venue keyword, severity, and incident recency.
+ * Complexity: O(A) — single pass to bucket unresolved alerts by zone, then one recommendation
+ * per clustered zone; reasoning lines are O(A_zone) concatenated, no nested cross-product loops.
+ */
 export const evaluateIncidentEscalation = (alerts: Alert[]): Recommendation[] => {
   const unresolved = alerts.filter(alert => !alert.isAcknowledged)
   const zoneAlerts = new Map<string, Alert[]>()
@@ -187,7 +199,11 @@ export const evaluateIncidentEscalation = (alerts: Alert[]): Recommendation[] =>
   return recommendations
 }
 
-/** Evaluates delayed bracket matches that block downstream TBD slots from being resolved. */
+/**
+ * Evaluates delayed bracket matches that block downstream TBD slots from being resolved.
+ * Complexity: O(R·M) — per round with delays, scan subsequent-round matches once for TBD blockers
+ * (hoisted), then emit one rec per delayed match. No per-delayed rescan of the full bracket.
+ */
 export const evaluateTournamentBottleneck = (rounds: Round[]): Recommendation[] => {
   const recommendations: Recommendation[] = []
 
@@ -207,10 +223,12 @@ export const evaluateTournamentBottleneck = (rounds: Round[]): Recommendation[] 
 
     if (blockedMatches.length === 0) return
 
+    // Hoisted: same for every delayed match in this round (avoids re-scanning next-round TBDs).
+    const directlyBlocksNextRound = Boolean(
+      immediateNextRound?.matches.some(match => match.teamHome.includes('TBD') || match.teamAway.includes('TBD'))
+    )
+
     for (const delayedMatch of delayedMatches) {
-      const directlyBlocksNextRound = Boolean(
-        immediateNextRound?.matches.some(match => match.teamHome.includes('TBD') || match.teamAway.includes('TBD'))
-      )
       const priority: Recommendation['priority'] = directlyBlocksNextRound && pct >= 75 ? 'high' : 'medium'
       recommendations.push({
         id: `REC-BOTTLENECK-${delayedMatch.id}`,
@@ -231,7 +249,10 @@ export const evaluateTournamentBottleneck = (rounds: Round[]): Recommendation[] 
   return recommendations
 }
 
-/** Generates deterministic recommendations from the full operations snapshot sorted by priority. */
+/**
+ * Aggregates all rule outputs and sorts by priority then id.
+ * Complexity: O(cost of four rules + K log K) where K is total recommendations; no cross-rule nested loops.
+ */
 export const generateRecommendations = (state: OperationsState): Recommendation[] => {
   const all = [
     ...evaluateGateCongestion(state.matches, state.zones, state.sections),

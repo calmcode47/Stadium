@@ -68,7 +68,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ matches }) => {
                       <span className="text-text-muted text-[10px] uppercase tracking-wider">
                         {match.venue}
                       </span>
-                      <StatusPill variant={match.status} className="scale-90 origin-right" />
+                      <StatusPill variant={match.status} />
                     </div>
                   </div>
                 ))}

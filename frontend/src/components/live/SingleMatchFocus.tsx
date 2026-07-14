@@ -1,5 +1,5 @@
 import React from 'react'
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw.mjs'
 import Timer from 'lucide-react/dist/esm/icons/timer.mjs'
 import Target from 'lucide-react/dist/esm/icons/target.mjs'
@@ -7,11 +7,15 @@ import type { Match, MatchEvent } from '@/types/operations'
 import Panel from '@/components/design-system/Panel'
 import DataLabel from '@/components/design-system/DataLabel'
 import ScoreDigit from '@/components/design-system/ScoreDigit'
+import WindowedList from '@/components/design-system/WindowedList'
 
 interface SingleMatchFocusProps {
   match: Match
   events: MatchEvent[]
 }
+
+const LIST_HEIGHT = 350
+const ROW_ESTIMATE = 48
 
 export const SingleMatchFocus: React.FC<SingleMatchFocusProps> = React.memo(({ match, events }) => {
   const shouldReduceMotion = useReducedMotion()
@@ -48,9 +52,9 @@ export const SingleMatchFocus: React.FC<SingleMatchFocusProps> = React.memo(({ m
         <div className="flex flex-col sm:flex-row items-center justify-center gap-8 md:gap-16 my-8 w-full">
           {/* Home team */}
           <div className="flex flex-col items-center sm:items-end text-center sm:text-right w-full sm:w-2/5">
-            <h3 className="text-lg md:text-xl font-mono text-text-primary tracking-wider uppercase font-semibold">
+            <p className="text-lg md:text-xl font-mono text-text-primary tracking-wider uppercase font-semibold">
               {match.teamHome}
-            </h3>
+            </p>
             <DataLabel className="text-[10px] text-text-muted mt-1">HOME SQUAD</DataLabel>
           </div>
 
@@ -67,9 +71,9 @@ export const SingleMatchFocus: React.FC<SingleMatchFocusProps> = React.memo(({ m
 
           {/* Away team */}
           <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full sm:w-2/5">
-            <h3 className="text-lg md:text-xl font-mono text-text-primary tracking-wider uppercase font-semibold">
+            <p className="text-lg md:text-xl font-mono text-text-primary tracking-wider uppercase font-semibold">
               {match.teamAway}
-            </h3>
+            </p>
             <DataLabel className="text-[10px] text-text-muted mt-1">AWAY SQUAD</DataLabel>
           </div>
         </div>
@@ -101,73 +105,71 @@ export const SingleMatchFocus: React.FC<SingleMatchFocusProps> = React.memo(({ m
           </span>
         </div>
 
-        <div className="flex flex-col gap-2 max-h-[350px] overflow-y-auto pr-1">
-          <AnimatePresence initial={false}>
-            {matchEvents.length === 0 ? (
-              <div className="text-center py-10 font-mono text-xs text-text-muted uppercase">
-                NO REGISTERED EVENTS FOR THIS MATCH NODES
-              </div>
-            ) : (
-              matchEvents.map((event, idx) => {
-                // Determine flash color based on event type
-                const flashBgColors = {
-                  goal: 'rgba(46, 204, 113, 0.35)',      // Green flash
-                  card_yellow: 'rgba(255, 176, 32, 0.35)', // Yellow flash
-                  card_red: 'rgba(255, 71, 87, 0.35)',     // Red flash
-                  substitution: 'rgba(0, 217, 255, 0.35)', // Cyan flash
-                  timeout: 'rgba(139, 152, 165, 0.35)'     // Grey flash
+        <WindowedList
+          items={matchEvents}
+          estimateHeight={ROW_ESTIMATE}
+          height={LIST_HEIGHT}
+          className="pr-1"
+          getKey={event => event.id}
+          empty={
+            <div className="text-center py-10 font-mono text-xs text-text-muted uppercase">
+              NO REGISTERED EVENTS FOR THIS MATCH NODES
+            </div>
+          }
+          renderItem={(event, idx) => {
+            const flashBgColors = {
+              goal: 'rgba(46, 204, 113, 0.35)',
+              card_yellow: 'rgba(255, 176, 32, 0.35)',
+              card_red: 'rgba(255, 71, 87, 0.35)',
+              substitution: 'rgba(0, 217, 255, 0.35)',
+              timeout: 'rgba(139, 152, 165, 0.35)'
+            }
+            const currentFlashColor = flashBgColors[event.type] || 'rgba(0, 217, 255, 0.2)'
+            const isNewestEvent = idx === 0
+
+            return (
+              <motion.div
+                aria-live={event.type === 'goal' || event.type === 'card_red' ? 'assertive' : 'polite'}
+                initial={
+                  isNewestEvent
+                    ? (shouldReduceMotion
+                        ? { opacity: 0 }
+                        : { opacity: 0, y: -10, backgroundColor: currentFlashColor })
+                    : false
                 }
-                const currentFlashColor = flashBgColors[event.type] || 'rgba(0, 217, 255, 0.2)'
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                  backgroundColor: 'rgba(28, 36, 45, 0.3)',
+                  transition: {
+                    backgroundColor: shouldReduceMotion ? { duration: 0 } : { duration: 1.2, ease: 'easeOut', delay: 0.15 },
+                    opacity: { duration: shouldReduceMotion ? 0 : 0.25 },
+                    y: { duration: shouldReduceMotion ? 0 : 0.25 }
+                  }
+                }}
+                className={`mb-2 p-2.5 border rounded-[2px] flex items-center justify-between font-mono text-xs transition-all duration-300 ${
+                  isNewestEvent
+                    ? 'border-cyan/70 shadow-[0_0_8px_rgba(0,217,255,0.15)]'
+                    : 'border-cyan/10'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-cyan font-bold w-10 shrink-0">{event.time}</span>
+                  <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                    {eventIcons[event.type]}
+                  </div>
+                  <span className="text-text-primary text-[11px] font-medium tracking-wide">
+                    {event.detail}
+                  </span>
+                </div>
 
-                // Check if this is the newest event (first index) to trigger border flash
-                const isNewestEvent = idx === 0
-
-                return (
-                  <motion.div
-                    key={event.id}
-                    aria-live={event.type === 'goal' || event.type === 'card_red' ? 'assertive' : 'polite'}
-                    initial={isNewestEvent ? (shouldReduceMotion ? { opacity: 0 } : { 
-                      opacity: 0, 
-                      y: -10, 
-                      backgroundColor: currentFlashColor 
-                    }) : undefined}
-                    animate={{ 
-                      opacity: 1, 
-                      y: 0, 
-                      backgroundColor: 'rgba(28, 36, 45, 0.3)',
-                      transition: {
-                        backgroundColor: shouldReduceMotion ? { duration: 0 } : { duration: 1.2, ease: 'easeOut', delay: 0.15 },
-                        opacity: { duration: shouldReduceMotion ? 0 : 0.25 },
-                        y: { duration: shouldReduceMotion ? 0 : 0.25 }
-                      }
-                    }}
-                    className={`p-2.5 border rounded-[2px] flex items-center justify-between font-mono text-xs transition-all duration-300 ${
-                      isNewestEvent 
-                        ? 'border-cyan/70 shadow-[0_0_8px_rgba(0,217,255,0.15)]' 
-                        : 'border-cyan/10'
-                    }`}
-                  >
-                    {/* Time & Icon & Details */}
-                    <div className="flex items-center gap-3">
-                      <span className="text-cyan font-bold w-10 shrink-0">{event.time}</span>
-                      <div className="w-5 h-5 flex items-center justify-center shrink-0">
-                        {eventIcons[event.type]}
-                      </div>
-                      <span className="text-text-primary text-[11px] font-medium tracking-wide">
-                        {event.detail}
-                      </span>
-                    </div>
-
-                    {/* Clock Timestamp */}
-                    <span className="text-text-muted text-[10px] shrink-0 ml-2 sm:ml-4 hidden sm:inline">
-                      {event.timestamp}
-                    </span>
-                  </motion.div>
-                )
-              })
-            )}
-          </AnimatePresence>
-        </div>
+                <span className="text-text-muted text-[10px] shrink-0 ml-2 sm:ml-4 hidden sm:inline">
+                  {event.timestamp}
+                </span>
+              </motion.div>
+            )
+          }}
+        />
       </Panel>
 
     </div>

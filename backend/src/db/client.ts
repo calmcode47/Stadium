@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import Database from 'better-sqlite3'
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
+import { clearRecommendationCache } from '../lib/recommendationCache'
 import * as schema from './schema'
 
 export type Db = BetterSQLite3Database<typeof schema>
@@ -44,6 +45,7 @@ export const closeDatabase = (): void => {
     handle.sqlite.close()
     handle = null
   }
+  clearRecommendationCache()
 }
 
 export const ensureSchema = (sqlite: Database.Database): void => {

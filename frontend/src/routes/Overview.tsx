@@ -69,10 +69,10 @@ export const Overview: React.FC = () => {
               </DataLabel>
             </div>
             
-            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-display tracking-wide uppercase text-text-primary leading-tight">
+            <h2 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-display tracking-wide uppercase text-text-primary leading-tight">
               Smart Stadium <br />
               <span className="text-cyan">Operations Center</span>
-            </h1>
+            </h2>
             
             <div className="mt-4 font-mono text-[9px] sm:text-xs text-text-muted border-l-2 border-cyan/40 pl-3 sm:pl-4 py-1.5 bg-base/30 max-w-lg break-words">
               SYSTEM STATUS: <span className="text-success font-semibold">NOMINAL</span> // 
@@ -182,9 +182,9 @@ export const Overview: React.FC = () => {
                 <AlertTriangle size={14} className="text-amber" />
                 <DataLabel className="text-amber font-bold">PREVIEW MATRIX // OFFSITE LINK</DataLabel>
               </div>
-              <h3 className="text-xl font-display uppercase text-text-primary tracking-wider">
+              <h2 className="text-xl font-display uppercase text-text-primary tracking-wider">
                 Live Operations Room Preview
-              </h3>
+              </h2>
             </div>
             <Link to="/dashboard">
               <Button variant="secondary" className="flex items-center gap-2">

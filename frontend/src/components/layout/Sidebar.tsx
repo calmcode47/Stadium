@@ -82,7 +82,7 @@ export const Sidebar: React.FC = () => {
                 end={item.to === '/'}
                 aria-label={item.label}
                 className={({ isActive }) => 
-                  `flex flex-col items-center justify-center w-12 h-full border-t-2 transition-all duration-200 ${
+                  `flex flex-col items-center justify-center min-w-11 min-h-11 w-14 h-full border-t-2 transition-all duration-200 ${
                     isActive 
                       ? 'border-cyan text-cyan' 
                       : 'border-transparent text-text-muted'

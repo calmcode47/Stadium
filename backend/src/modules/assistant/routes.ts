@@ -7,6 +7,11 @@ import { decisionLogEntries, operators } from '../../db/schema'
 import { explainWithAI, generateRecommendations } from '../../lib/assistantEngine'
 import { createId, isoNow, timeOfDay } from '../../lib/ids'
 import { badRequest, notFound } from '../../lib/httpErrors'
+import {
+  getCachedRecommendations,
+  getOperationsFingerprint,
+  setCachedRecommendations
+} from '../../lib/recommendationCache'
 import { getValidatedQuery, paginationSchema, validate } from '../../lib/validation'
 import { requireAuth, type AuthenticatedRequest } from '../../middleware/auth'
 import { getOperationsState } from '../operationsService'
@@ -21,6 +26,13 @@ const decisionSchema = z.object({
 
 router.get('/recommendations', async (_req, res, next) => {
   try {
+    const fingerprint = getOperationsFingerprint()
+    const cached = getCachedRecommendations(fingerprint)
+    if (cached) {
+      res.json({ data: cached })
+      return
+    }
+
     const recommendations = generateRecommendations(getOperationsState())
     const apiKey = getEnv().GEMINI_API_KEY
     const data = await Promise.all(
@@ -29,6 +41,7 @@ router.get('/recommendations', async (_req, res, next) => {
         aiExplanation: await explainWithAI(recommendation, apiKey)
       }))
     )
+    setCachedRecommendations(fingerprint, data)
     res.json({ data })
   } catch (error) {
     next(error)

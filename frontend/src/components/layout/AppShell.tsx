@@ -18,7 +18,7 @@ export const AppShell: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen md:h-screen bg-control-room text-primary relative flex flex-col md:overflow-hidden">
+    <div className="min-h-screen md:min-h-screen md:h-auto xl:h-screen bg-control-room text-primary relative flex flex-col md:overflow-x-hidden xl:overflow-x-hidden xl:overflow-y-auto">
       {/* Skip Link for Keyboard Accessibility */}
       <a 
         href="#main-content" 
@@ -32,7 +32,7 @@ export const AppShell: React.FC = () => {
 
       {/* Main Panel Content Area */}
       <div 
-        className={`flex-grow flex flex-col md:pl-64 pb-16 md:pb-0 min-h-screen md:h-screen md:overflow-hidden transition-all duration-200 ${
+        className={`flex-grow flex flex-col md:pl-64 pb-16 md:pb-0 min-h-screen md:min-h-screen xl:h-screen md:overflow-x-hidden xl:overflow-x-hidden transition-all duration-200 ${
           isAssistantOpen ? 'md:pr-[380px]' : 'md:pr-12'
         }`}
       >

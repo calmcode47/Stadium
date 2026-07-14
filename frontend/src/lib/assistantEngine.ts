@@ -56,7 +56,8 @@ const RECENT_INCIDENT_MINUTES = 15
 
 /**
  * Evaluates crowd egress risk from live-match timing, zone occupancy, and locked stand exits.
- * Returns deterministic recommendations for zones or sections that need gate intervention.
+ * Complexity: O(M + Z·M_near + S·M_near) — linear filter then per congested zone/section × near-end match;
+ * output size is Θ(Z·M_near + S·M_near); no hidden worse-than-necessary nesting.
  */
 export function evaluateGateCongestion(
   matches: Match[],
@@ -124,7 +125,8 @@ export function evaluateGateCongestion(
 
 /**
  * Evaluates same-venue schedule risk and weights priority by the gap to the next scheduled match.
- * Returns recommendations for delayed matches that can disrupt later same-venue fixtures.
+ * Complexity: O(M + Σ_v (D_v·S_v)) — group by venue in O(M), then emit one rec per (delayed, scheduled)
+ * pair (output Θ(D·S)); not flattenable without changing output.
  */
 export function evaluateMatchDelayRisk(rounds: Round[]): Recommendation[] {
   const recommendations: Recommendation[] = []
@@ -183,7 +185,8 @@ export function evaluateMatchDelayRisk(rounds: Round[]): Recommendation[] {
 
 /**
  * Evaluates unresolved alert clusters by venue keyword, severity, and incident recency.
- * Returns dispatch recommendations when multiple unresolved alerts indicate an active pattern.
+ * Complexity: O(A) — single pass to bucket unresolved alerts by zone, then one recommendation
+ * per clustered zone; no nested cross-product loops.
  */
 export function evaluateIncidentEscalation(alerts: Alert[]): Recommendation[] {
   const recommendations: Recommendation[] = []
@@ -238,7 +241,8 @@ export function evaluateIncidentEscalation(alerts: Alert[]): Recommendation[] {
 
 /**
  * Evaluates delayed bracket matches that block downstream TBD slots from being resolved.
- * Returns bottleneck recommendations with higher priority for direct next-round blockers.
+ * Complexity: O(R·M) — per delayed round, scan subsequent matches once for TBD blockers (hoisted),
+ * then emit one rec per delayed match.
  */
 export function evaluateTournamentBottleneck(rounds: Round[]): Recommendation[] {
   const recommendations: Recommendation[] = []
@@ -267,10 +271,12 @@ export function evaluateTournamentBottleneck(rounds: Round[]): Recommendation[] 
       }
 
       if (blockedMatches.length > 0) {
+        // Hoisted: same for every delayed match in this round.
+        const directlyBlocksNextRound = Boolean(
+          immediateNextRound?.matches.some(match => match.teamHome.includes('TBD') || match.teamAway.includes('TBD'))
+        )
+
         for (const dm of delayedMatches) {
-          const directlyBlocksNextRound = Boolean(
-            immediateNextRound?.matches.some(match => match.teamHome.includes('TBD') || match.teamAway.includes('TBD'))
-          )
           const priority: Recommendation['priority'] = directlyBlocksNextRound && pct >= 75 ? 'high' : 'medium'
           const reasoning = [
             `Round "${round.name}" is bottlenecked at ${pct}% completion (${completed}/${total} matches)`,
@@ -296,8 +302,8 @@ export function evaluateTournamentBottleneck(rounds: Round[]): Recommendation[] 
 }
 
 /**
- * Generates deterministic recommendations from the full operations snapshot sorted by priority.
- * Accepts the current operations state and returns a reproducible recommendation list.
+ * Aggregates all rule outputs and sorts by priority then id.
+ * Complexity: O(cost of four rules + K log K) where K is total recommendations; no cross-rule nested loops.
  */
 export function generateRecommendations(state: OperationsState): Recommendation[] {
   const { matches, zones, alerts, rounds, sections } = state

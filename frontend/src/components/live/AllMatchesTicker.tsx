@@ -66,7 +66,7 @@ export const AllMatchesTicker: React.FC<AllMatchesTickerProps> = ({
                 {/* Header: ID & Period */}
                 <div className="flex justify-between items-center border-b border-cyan/5 pb-1 mb-2 font-mono text-[9px]">
                   <span className="text-text-muted">{match.id}</span>
-                  <StatusPill variant={match.status} className="scale-75 origin-right" />
+                  <StatusPill variant={match.status} />
                 </div>
 
                 {/* Score & Abbreviations Body */}

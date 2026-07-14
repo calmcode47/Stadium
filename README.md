@@ -1,6 +1,20 @@
 # Smart Stadium & Tournament Operations
 
-Built for stadium operations staff and control-room operators who need fast, explainable decisions during live events.
+This project targets the stadium / venue and tournament-operations vertical. It is built for on-site operations staff and event control-room operators who need fast, explainable decisions during live events.
+
+## How This Solution Meets the Challenge Expectations
+
+- **"Smart, dynamic assistant"** — The collapsible **Operations Assistant** panel (`frontend/src/components/assistant/AssistantPanel.tsx`) shows recommendations produced by `generateRecommendations()` in `frontend/src/lib/assistantEngine.ts` / `backend/src/lib/assistantEngine.ts`. Outputs are recomputed from the current matches, zones, alerts, stand sections, and bracket rounds — not a fixed marketing list.
+
+- **"Logical decision making based on user context"** — Four named rule functions encode context: `evaluateGateCongestion`, `evaluateMatchDelayRisk`, `evaluateIncidentEscalation`, and `evaluateTournamentBottleneck`. Worked example: if zone `SECTOR GATE B (WEST)` is at **91%** occupancy (`4,550/5,000`) and live match `M-101` (`REAL MADRID` vs `MANCHESTER CITY`) is at minute **82** (8 minutes remaining), `evaluateGateCongestion` emits priority **`high`**, title **`Gate Congestion Risk: SECTOR GATE B (WEST)`**, reasoning that states the 91% occupancy and the 8-minute remaining window, and suggested action **`Open overflow routing or gates for SECTOR GATE B (WEST) immediately.`** If that zone stays early in the match or below 85% occupancy, the same rule emits nothing.
+
+- **"Practical and real-world usability"** — JWT roles (`admin` / `operator` / `viewer`) gate writes; Accept/Dismiss actions are recorded in the **Decision Log**; the stadium view degrades to a **2D blueprint**; Gemini failure or a missing key falls back to **offline template explanations**. These are operational safeguards, not demo-only chrome.
+
+- **"Clean and maintainable code"** — Current suites: **39** frontend Vitest tests and **35** backend Vitest tests (including **19** frontend and **13** backend cases focused on the assistant engine). Frontend and backend keep parallel `types/operations` models and mirrored `assistantEngine` modules; thresholds and reasoning strings are documented in code and covered by unit tests.
+
+This project both uses Gen AI as a development tool (prompt-driven work across the frontend, backend, tests, and documentation, including this clarity pass) and integrates Gen AI as a runtime feature (the optional Gemini "AI Summary" and assistant chat layer over deterministic recommendations).
+
+For a longer match-day walkthrough of the same rules, see [`SCENARIO.md`](./SCENARIO.md).
 
 ## Live Deployment
 - Frontend: [https://stadium-frontend.netlify.app/](https://stadium-frontend.netlify.app/)
@@ -9,7 +23,7 @@ Built for stadium operations staff and control-room operators who need fast, exp
 - Backend WebSocket URL: `wss://stadium-backend-production.up.railway.app/ws`
 
 ## 1. Chosen Vertical
-This application is designed for stadium/venue operations and tournament management. The solution is built around the persona of on-site operations staff and event control-room operators. These users require rapid situational awareness, high-density telemetry, and prioritized, explainable recommendations during live events to manage crowd congestion, security incidents, match delays, and tournament progression.
+Stadium / venue operations and tournament management for on-site operations staff and event control-room operators. These users need rapid situational awareness, high-density telemetry, and prioritized, explainable recommendations during live events to manage crowd congestion, security incidents, match delays, and tournament progression.
 
 ## 2. Approach & Logic
 The platform architecture uses a strict two-layer design for its Smart Operations Assistant:
@@ -17,7 +31,7 @@ The platform architecture uses a strict two-layer design for its Smart Operation
 1. **Deterministic Decision Engine (`src/lib/assistantEngine.ts`)**: A pure, framework-free TypeScript engine. It evaluates the operations state (matches, zones, alerts, stand sections, rounds) against defined threshold rules to generate prioritized and explainable recommendations. This layer contains no React dependencies, no side effects, and is fully unit-testable in isolation.
 2. **Google Gemini Explanation and Chat Layer**: If a Gemini API key is configured, the product uses Gemini to synthesize already-generated deterministic reasoning into a short natural-language "AI Summary" and to power the assistant chat panel. If the API key is absent or a request fails, recommendation explanations fall back to local structured template generation.
 
-The deterministic engine decides **what** recommendation appears, its priority, and the reasoning trail. Gemini only explains those decisions in operator-friendly language and answers chat questions using the current operations state. This separation is deliberate: the system demonstrates Gen AI usage without making operational decisions a black box.
+The deterministic engine decides **what** recommendation appears, its priority, and the reasoning trail. Gemini only explains those decisions in operator-friendly language and answers chat questions using the current operations state. This separation is deliberate: Gen AI is present at runtime for explanation and chat, while operational decisions stay inspectable and offline-capable.
 
 The four rule families use current context rather than isolated static checks:
 - **Gate congestion** weighs high occupancy against live match timing and locked stand exits.
@@ -26,7 +40,7 @@ The four rule families use current context rather than isolated static checks:
 - **Tournament bottlenecks** raise urgency when a delayed match directly blocks next-round TBD slots.
 
 ### Rationale for the Split:
-- **Testability**: The core recommendation logic is written as pure mathematical functions, allowing 100% test coverage of boundary conditions and trigger thresholds without mocking React or browser environments.
+- **Testability**: The core recommendation logic is written as pure functions, so boundary conditions and trigger thresholds can be unit-tested without mocking React or browser environments.
 - **Transparency**: Recommendation criteria are inspectable, predictable, and deterministic. Control-room staff can audit the exact telemetry rules that triggered any dispatch recommendation.
 - **Reliability**: Core operational decisions do not depend on external network availability or LLM API latency. Recommendations generate gauge-level telemetry immediately even in offline scenarios.
 
@@ -46,6 +60,7 @@ The four rule families use current context rather than isolated static checks:
 ```
 Stadium/
 ├── README.md                  # Root documentation and project guidelines
+├── SCENARIO.md                # Concrete match-day walkthrough of assistant rules
 ├── PROJECT_STATUS_REPORT.md   # Architectural status and phase logs
 ├── backend/                   # TypeScript Express + SQLite backend
 │   ├── src/
@@ -225,5 +240,5 @@ Before submitting, verify these repository requirements:
 | Public GitHub repository | **Action required** | Remote is currently **private**. Set the repo to public before submission. |
 | Repository size under 10 MB | Pass | Tracked source is under 1 MB (`node_modules` and `.env` are gitignored). |
 | Single branch only | Pass | `main` is the only branch. |
-| Complete README | Pass | Vertical, approach, setup, assumptions, and architecture are documented above. |
+| Complete README | Pass | Opening states vertical + persona; challenge-alignment section and [`SCENARIO.md`](./SCENARIO.md) document decision logic with concrete examples. |
 | Tests included | Pass | Run `npm run test` in both `backend/` and `frontend/`. |

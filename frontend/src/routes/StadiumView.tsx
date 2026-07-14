@@ -76,21 +76,21 @@ export const StadiumView: React.FC = () => {
                 <Button 
                   variant={cameraPreset === 'overview' ? 'primary' : 'secondary'} 
                   onClick={() => setCameraPreset('overview')}
-                  className="py-1 px-2.5 text-[8px] font-mono h-6 flex items-center justify-center"
+                  className="py-1 px-2.5 text-[8px] font-mono flex items-center justify-center"
                 >
                   OVERVIEW
                 </Button>
                 <Button 
                   variant={cameraPreset === 'pitch' ? 'primary' : 'secondary'} 
                   onClick={() => setCameraPreset('pitch')}
-                  className="py-1 px-2.5 text-[8px] font-mono h-6 flex items-center justify-center"
+                  className="py-1 px-2.5 text-[8px] font-mono flex items-center justify-center"
                 >
                   PITCH
                 </Button>
                 <Button 
                   variant={cameraPreset === 'north' ? 'primary' : 'secondary'} 
                   onClick={() => setCameraPreset('north')}
-                  className="py-1 px-2.5 text-[8px] font-mono h-6 flex items-center justify-center"
+                  className="py-1 px-2.5 text-[8px] font-mono flex items-center justify-center"
                 >
                   NORTH
                 </Button>
@@ -111,7 +111,7 @@ export const StadiumView: React.FC = () => {
             onClick={() => setIsSimplified(prev => !prev)}
             aria-label="Toggle between 3D visual stadium and accessible 2D vector blueprint"
             aria-pressed={isSimplified}
-            className="py-1 px-2.5 text-[8px] font-mono h-6 flex items-center gap-1.5 justify-center"
+            className="py-1 px-2.5 text-[8px] font-mono flex items-center gap-1.5 justify-center"
           >
             <Layers size={10} />
             <span>{isSimplified ? '3D VIEW' : '2D VIEW'}</span>
@@ -131,22 +131,33 @@ export const StadiumView: React.FC = () => {
                   <DataLabel className="text-cyan">SECTOR ANALYTICS</DataLabel>
                   <StatusPill variant={currentSection.gateStatus === 'open' ? 'completed' : 'cancelled'} />
                 </div>
-                <h3 className="text-xl font-display text-text-primary uppercase tracking-wider mt-1">
+                <h2 className="text-xl font-display text-text-primary uppercase tracking-wider mt-1">
                   {currentSection.name}
-                </h3>
+                </h2>
               </div>
 
               {/* Occupancy bar indicator */}
               <div className="flex flex-col gap-1.5 font-mono text-xs">
-                <div className="flex justify-between items-baseline">
+                <div className="flex flex-wrap justify-between items-baseline gap-2">
                   <span className="text-text-muted">OCCUPANCY STATUS:</span>
                   <span className="text-text-primary font-bold">
-                    {currentSection.occupancy.toLocaleString()} / {currentSection.maxCapacity.toLocaleString()} ({Math.round(currentSection.occupancy / currentSection.maxCapacity * 100)}%)
+                    {(() => {
+                      const pct = Math.round(currentSection.occupancy / currentSection.maxCapacity * 100)
+                      const level = pct > 90 ? 'CRITICAL' : pct > 80 ? 'ELEVATED' : 'NOMINAL'
+                      return `${level} — ${currentSection.occupancy.toLocaleString()} / ${currentSection.maxCapacity.toLocaleString()} (${pct}%)`
+                    })()}
                   </span>
                 </div>
                 
                 {/* Rectangular progress bar fill */}
-                <div className="w-full bg-base border border-cyan/15 h-4 p-0.5 rounded-none overflow-hidden">
+                <div
+                  className="w-full bg-base border border-cyan/15 h-4 p-0.5 rounded-none overflow-hidden"
+                  role="meter"
+                  aria-valuenow={Math.round(currentSection.occupancy / currentSection.maxCapacity * 100)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`${currentSection.name} occupancy`}
+                >
                   <div
                     className={`h-full rounded-none transition-all duration-500 ${
                       (currentSection.occupancy / currentSection.maxCapacity) > 0.9

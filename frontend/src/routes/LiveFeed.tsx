@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import Radio from 'lucide-react/dist/esm/icons/radio.mjs'
 import LayoutGrid from 'lucide-react/dist/esm/icons/layout-grid.mjs'
 import AlertTriangle from 'lucide-react/dist/esm/icons/triangle-alert.mjs'
@@ -12,6 +12,7 @@ import SingleMatchFocus from '@/components/live/SingleMatchFocus'
 import AllMatchesTicker from '@/components/live/AllMatchesTicker'
 
 export const LiveFeed: React.FC = () => {
+  const shouldReduceMotion = useReducedMotion()
   const { matchId } = useParams<{ matchId?: string }>()
   const navigate = useNavigate()
 
@@ -51,7 +52,7 @@ export const LiveFeed: React.FC = () => {
           <Button
             variant={activeMode === 'single' ? 'primary' : 'secondary'}
             onClick={() => setActiveMode('single')}
-            className="py-1 px-2.5 text-[9px] font-mono h-7 flex items-center gap-1.5"
+            className="py-1 px-2.5 text-[9px] font-mono flex items-center gap-1.5"
           >
             <Radio size={12} className={activeMode === 'single' ? 'animate-pulse' : ''} />
             <span>SINGLE FOCUS</span>
@@ -59,7 +60,7 @@ export const LiveFeed: React.FC = () => {
           <Button
             variant={activeMode === 'ticker' ? 'primary' : 'secondary'}
             onClick={() => setActiveMode('ticker')}
-            className="py-1 px-2.5 text-[9px] font-mono h-7 flex items-center gap-1.5"
+            className="py-1 px-2.5 text-[9px] font-mono flex items-center gap-1.5"
           >
             <LayoutGrid size={12} />
             <span>ALL TICKER WALL</span>
@@ -96,9 +97,9 @@ export const LiveFeed: React.FC = () => {
       {/* 2. Main Live Content Area (fast 100ms fade) */}
       <motion.div
         key={`${activeMode}-${selectedMatchId}`}
-        initial={{ opacity: 0 }}
+        initial={shouldReduceMotion ? false : { opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.1 }}
+        transition={{ duration: shouldReduceMotion ? 0 : 0.1 }}
         className="w-full"
       >
         {activeMode === 'single' ? (
@@ -117,7 +118,7 @@ export const LiveFeed: React.FC = () => {
               <Button 
                 variant="secondary" 
                 onClick={() => handleMatchSelect('M-101')}
-                className="mt-4 py-1.5 px-3 text-[10px] font-mono h-8"
+                className="mt-4 py-1.5 px-3 text-[10px] font-mono"
               >
                 RESET TO CORE CHANNEL M-101
               </Button>

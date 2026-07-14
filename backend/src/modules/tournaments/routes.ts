@@ -21,6 +21,8 @@ router.get('/', validate('query', paginationSchema), (req, res) => {
       .where(and(inArray(matches.tournamentId, tournamentIds), isNotNull(matches.roundId)))
       .all()
     : []
+  // Tournament list metadata changes slowly vs live scores/alerts — short private cache OK.
+  res.setHeader('Cache-Control', 'private, max-age=8')
   res.json({ data: tournamentRows.map(row => mapTournamentSummary(row, matchRows.filter(match => match.tournamentId === row.id && match.roundId !== null))) })
 })
 
@@ -30,6 +32,8 @@ router.get('/:id', validate('params', paramsSchema), (req, res, next) => {
     const tournament = getDatabase().db.select().from(tournaments).where(eq(tournaments.id, id)).get()
     if (!tournament) throw notFound('Tournament not found')
     const matchRows = getDatabase().db.select().from(matches).where(and(eq(matches.tournamentId, tournament.id), isNotNull(matches.roundId))).all()
+    // Single-tournament summary is slow-changing relative to live match/venue feeds.
+    res.setHeader('Cache-Control', 'private, max-age=8')
     res.json({ data: mapTournamentSummary(tournament, matchRows) })
   } catch (error) {
     next(error)
@@ -49,6 +53,8 @@ router.get('/:id/bracket', validate('params', paramsSchema), (req, res, next) =>
       .orderBy(asc(matches.scheduledStart))
       .all()
     const venueRows = getDatabase().db.select().from(venues).all()
+    // Bracket embeds live match status/scores — do not HTTP-cache.
+    res.setHeader('Cache-Control', 'no-store')
     res.json({ data: mapRounds(roundRows, matchRows, venueRows) })
   } catch (error) {
     next(error)
@@ -71,6 +77,8 @@ router.get('/:id/schedule', validate('params', paramsSchema), (req, res, next) =
     const schedule = mapRounds(roundRows, matchRows, venueRows)
       .flatMap(round => round.matches)
       .sort((left, right) => `${left.date} ${left.time}`.localeCompare(`${right.date} ${right.time}`))
+    // Schedule list includes live match status — do not HTTP-cache.
+    res.setHeader('Cache-Control', 'no-store')
     res.json({ data: schedule })
   } catch (error) {
     next(error)

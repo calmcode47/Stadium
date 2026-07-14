@@ -11,17 +11,17 @@ interface BracketViewProps {
 
 export const BracketView: React.FC<BracketViewProps> = ({ rounds }) => {
   return (
-    <div className="w-full bg-surface/20 border border-cyan/15 rounded-[4px] p-3 sm:p-6 overflow-hidden flex flex-col gap-4">
+    <div className="w-full bg-surface/20 border border-cyan/15 rounded-[4px] p-3 sm:p-6 overflow-x-auto flex flex-col gap-4">
       
       {/* Title / Log bar */}
-      <div className="flex items-center justify-between border-b border-cyan/10 pb-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-cyan/10 pb-2">
         <DataLabel>SINGLE ELIMINATION CHAMPIONS MATRIX</DataLabel>
-        <span className="font-mono text-[9px] text-cyan/70 uppercase hidden sm:inline">
+        <span className="font-mono text-[9px] text-cyan/70 uppercase hidden sm:inline break-words">
           HORIZONTAL TRACKER // DRAG OR SCROLL TO VIEW ALL ROUNDS
         </span>
       </div>
 
-      {/* Bracket flex row - Horizontally scrolls on smaller screens with thin custom scrollbar */}
+      {/* Bracket flex row - intentional horizontal scroll; cards grow with text zoom */}
       <div className="flex gap-6 sm:gap-12 md:gap-16 overflow-x-auto pb-6 pt-4 scrollbar-thin scrollbar-thumb-cyan/20 scrollbar-track-base/30 select-none">
         {rounds.map((round) => {
           const isFinalRound = round.id === rounds.length
@@ -29,8 +29,7 @@ export const BracketView: React.FC<BracketViewProps> = ({ rounds }) => {
           return (
             <div 
               key={round.id} 
-              className="flex flex-col justify-around min-w-[220px] sm:min-w-[260px] md:min-w-[280px] py-4 relative gap-8"
-              style={{ minHeight: '460px' }}
+              className="flex flex-col justify-around min-w-[14rem] sm:min-w-[16rem] md:min-w-[18rem] py-4 relative gap-8 min-h-[28rem]"
             >
               {/* Round Header Label */}
               <div className="absolute top-0 left-0 right-0 text-center border-b border-cyan/5 pb-1">
@@ -69,22 +68,22 @@ export const BracketView: React.FC<BracketViewProps> = ({ rounds }) => {
                     {/* Match Card Panel Container */}
                     <Panel 
                       live={isLive}
-                      className={`relative z-10 p-3 hover:border-cyan/50 transition-colors duration-150 rounded-[2px] bg-elevated/40 border border-cyan/15 ${
+                      className={`relative z-10 p-3 hover:border-cyan/50 transition-colors duration-150 rounded-[2px] bg-elevated/40 border border-cyan/15 overflow-visible ${
                         isLive ? 'border-l-[3px] border-l-cyan pl-2.5' : ''
                       }`}
                     >
                       {/* Match Meta: ID, Time, Date, Status */}
-                      <div className="flex justify-between items-center border-b border-cyan/5 pb-2 mb-2 font-mono text-[9px]">
-                        <span className="text-text-muted">{match.id} // {match.time}</span>
-                        <StatusPill variant={match.status} className="scale-75 origin-right" />
+                      <div className="flex flex-wrap justify-between items-center gap-2 border-b border-cyan/5 pb-2 mb-2 font-mono text-[9px]">
+                        <span className="text-text-muted break-words">{match.id} // {match.time}</span>
+                        <StatusPill variant={match.status} />
                       </div>
 
                       {/* Competitor List */}
                       <div className="flex flex-col gap-2 font-mono text-xs">
                         
                         {/* Home Team */}
-                        <div className="flex items-center justify-between">
-                          <span className={`${
+                        <div className="flex items-center justify-between gap-2 min-w-0">
+                          <span className={`break-words min-w-0 ${
                             homeRouteHighlight 
                               ? 'text-cyan font-semibold' 
                               : isAwayWinner 
@@ -101,8 +100,8 @@ export const BracketView: React.FC<BracketViewProps> = ({ rounds }) => {
                         </div>
 
                         {/* Away Team */}
-                        <div className="flex items-center justify-between">
-                          <span className={`${
+                        <div className="flex items-center justify-between gap-2 min-w-0">
+                          <span className={`break-words min-w-0 ${
                             awayRouteHighlight 
                               ? 'text-cyan font-semibold' 
                               : isHomeWinner 
