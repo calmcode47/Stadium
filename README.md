@@ -232,13 +232,4 @@ npm audit
 
 ---
 
-## 8. Submission Checklist (Challenge Rules)
-Before submitting, verify these repository requirements:
 
-| Rule | Status | Notes |
-| --- | --- | --- |
-| Public GitHub repository | **Action required** | Remote is currently **private**. Set the repo to public before submission. |
-| Repository size under 10 MB | Pass | Tracked source is under 1 MB (`node_modules` and `.env` are gitignored). |
-| Single branch only | Pass | `main` is the only branch. |
-| Complete README | Pass | Opening states vertical + persona; challenge-alignment section and [`SCENARIO.md`](./SCENARIO.md) document decision logic with concrete examples. |
-| Tests included | Pass | Run `npm run test` in both `backend/` and `frontend/`. |
