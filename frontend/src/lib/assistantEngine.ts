@@ -59,6 +59,7 @@ const RECENT_INCIDENT_MINUTES = 15
  * Complexity: O(M + Z·M_near + S·M_near) — linear filter then per congested zone/section × near-end match;
  * output size is Θ(Z·M_near + S·M_near); no hidden worse-than-necessary nesting.
  */
+// Complexity: O(m + z * n + s * n) - one match pass, then one output per congested zone/section and near-end live match.
 export function evaluateGateCongestion(
   matches: Match[],
   zones: VenueZone[],
@@ -128,6 +129,7 @@ export function evaluateGateCongestion(
  * Complexity: O(M + Σ_v (D_v·S_v)) — group by venue in O(M), then emit one rec per (delayed, scheduled)
  * pair (output Θ(D·S)); not flattenable without changing output.
  */
+// Complexity: O(m + sum(d_v * s_v)) - group matches by venue, then emit each delayed/scheduled same-venue pair.
 export function evaluateMatchDelayRisk(rounds: Round[]): Recommendation[] {
   const recommendations: Recommendation[] = []
   
@@ -188,6 +190,7 @@ export function evaluateMatchDelayRisk(rounds: Round[]): Recommendation[] {
  * Complexity: O(A) — single pass to bucket unresolved alerts by zone, then one recommendation
  * per clustered zone; no nested cross-product loops.
  */
+// Complexity: O(a) - single pass to bucket unresolved alerts plus linear per-zone aggregation.
 export function evaluateIncidentEscalation(alerts: Alert[]): Recommendation[] {
   const recommendations: Recommendation[] = []
   const unresolved = alerts.filter(a => !a.isAcknowledged)
@@ -244,6 +247,7 @@ export function evaluateIncidentEscalation(alerts: Alert[]): Recommendation[] {
  * Complexity: O(R·M) — per delayed round, scan subsequent matches once for TBD blockers (hoisted),
  * then emit one rec per delayed match.
  */
+// Complexity: O(r * m + d) - each delayed round scans downstream matches once, then emits one rec per delayed match.
 export function evaluateTournamentBottleneck(rounds: Round[]): Recommendation[] {
   const recommendations: Recommendation[] = []
 
@@ -305,6 +309,7 @@ export function evaluateTournamentBottleneck(rounds: Round[]): Recommendation[] 
  * Aggregates all rule outputs and sorts by priority then id.
  * Complexity: O(cost of four rules + K log K) where K is total recommendations; no cross-rule nested loops.
  */
+// Complexity: O(rule costs + k log k) - aggregate rule outputs, then sort total recommendations by priority and id.
 export function generateRecommendations(state: OperationsState): Recommendation[] {
   const { matches, zones, alerts, rounds, sections } = state
 

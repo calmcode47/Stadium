@@ -48,6 +48,7 @@ const slug = (input: string): string => input.replace(/[^a-zA-Z0-9]+/g, '-').rep
  * Complexity: O(M + Z·M_near + S·M_near) — one linear pass over matches, then emit per congested
  * zone/section × near-end live match. Output size is Θ(Z·M_near + S·M_near); no hidden O(n²) beyond necessary pairing.
  */
+// Complexity: O(m + z * n + s * n) - one match pass, then one output per congested zone/section and near-end live match.
 export const evaluateGateCongestion = (
   matches: Match[],
   zones: VenueZone[],
@@ -110,6 +111,7 @@ export const evaluateGateCongestion = (
  * Complexity: O(M + Σ_v (D_v·S_v)) — group matches by venue in O(M), then intentionally emit one
  * recommendation per (delayed, scheduled) pair at that venue (output Θ(D·S)); not flattenable without changing output.
  */
+// Complexity: O(m + sum(d_v * s_v)) - group matches by venue, then emit each delayed/scheduled same-venue pair.
 export const evaluateMatchDelayRisk = (rounds: Round[]): Recommendation[] => {
   const allMatches = rounds.flatMap(round => round.matches)
   const byVenue = new Map<string, typeof allMatches>()
@@ -164,6 +166,7 @@ export const evaluateMatchDelayRisk = (rounds: Round[]): Recommendation[] => {
  * Complexity: O(A) — single pass to bucket unresolved alerts by zone, then one recommendation
  * per clustered zone; reasoning lines are O(A_zone) concatenated, no nested cross-product loops.
  */
+// Complexity: O(a) - single pass to bucket unresolved alerts plus linear per-zone aggregation.
 export const evaluateIncidentEscalation = (alerts: Alert[]): Recommendation[] => {
   const unresolved = alerts.filter(alert => !alert.isAcknowledged)
   const zoneAlerts = new Map<string, Alert[]>()
@@ -204,6 +207,7 @@ export const evaluateIncidentEscalation = (alerts: Alert[]): Recommendation[] =>
  * Complexity: O(R·M) — per round with delays, scan subsequent-round matches once for TBD blockers
  * (hoisted), then emit one rec per delayed match. No per-delayed rescan of the full bracket.
  */
+// Complexity: O(r * m + d) - each delayed round scans downstream matches once, then emits one rec per delayed match.
 export const evaluateTournamentBottleneck = (rounds: Round[]): Recommendation[] => {
   const recommendations: Recommendation[] = []
 
@@ -253,6 +257,7 @@ export const evaluateTournamentBottleneck = (rounds: Round[]): Recommendation[] 
  * Aggregates all rule outputs and sorts by priority then id.
  * Complexity: O(cost of four rules + K log K) where K is total recommendations; no cross-rule nested loops.
  */
+// Complexity: O(rule costs + k log k) - aggregate rule outputs, then sort total recommendations by priority and id.
 export const generateRecommendations = (state: OperationsState): Recommendation[] => {
   const all = [
     ...evaluateGateCongestion(state.matches, state.zones, state.sections),
