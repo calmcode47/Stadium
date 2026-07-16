@@ -2,13 +2,20 @@ import { describe, expect, it } from 'vitest'
 import {
   formatGeminiError,
   GEMINI_MODEL,
+  normalizeGeminiModel,
   parseGeminiRetryDelayMs,
   resetGeminiRateLimiterForTests
 } from './geminiConfig'
 
 describe('geminiConfig', () => {
-  it('defaults to the flash-lite model for higher free-tier throughput', () => {
-    expect(GEMINI_MODEL).toBe('gemini-3.1-flash-lite-preview')
+  it('defaults to the supported flash-lite model', () => {
+    expect(GEMINI_MODEL).toBe('gemini-3.1-flash-lite')
+  })
+
+  it('normalizes retired preview model names to the supported flash-lite model', () => {
+    expect(normalizeGeminiModel('gemini-3.1-flash-lite-preview')).toBe('gemini-3.1-flash-lite')
+    expect(normalizeGeminiModel(' gemini-3.1-flash-lite-preview ')).toBe('gemini-3.1-flash-lite')
+    expect(normalizeGeminiModel('gemini-3.1-pro-preview')).toBe('gemini-3.1-pro-preview')
   })
 
   it('parses retry delays from quota error messages', () => {

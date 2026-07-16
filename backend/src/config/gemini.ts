@@ -1,11 +1,17 @@
 import { getEnv } from './env.js'
 
-/** Lite model default — higher free-tier daily limits than gemini-2.5-flash. */
-export const DEFAULT_GEMINI_MODEL = 'gemini-3.1-flash-lite-preview'
+/** Lite model default for low-latency text generation. */
+export const DEFAULT_GEMINI_MODEL = 'gemini-3.1-flash-lite'
+export const RETIRED_GEMINI_MODELS = new Set(['gemini-3.1-flash-lite-preview'])
+
+export const normalizeGeminiModel = (model?: string): string => {
+  const configured = model?.trim()
+  if (!configured || RETIRED_GEMINI_MODELS.has(configured)) return DEFAULT_GEMINI_MODEL
+  return configured
+}
 
 export const getGeminiModel = (): string => {
-  const configured = getEnv().GEMINI_MODEL.trim()
-  return configured || DEFAULT_GEMINI_MODEL
+  return normalizeGeminiModel(getEnv().GEMINI_MODEL)
 }
 
 export const getGeminiGenerateUrl = (): string => {

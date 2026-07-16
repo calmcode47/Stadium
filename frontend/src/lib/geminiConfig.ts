@@ -1,12 +1,20 @@
 /**
  * Gemini API configuration tuned for the free tier.
  *
- * gemini-3.1-flash-lite-preview offers higher daily throughput than gemini-2.5-flash
- * and remains available to new Google AI Studio accounts (2.5 Flash-Lite is restricted).
+ * gemini-3.1-flash-lite replaces the retired gemini-3.1-flash-lite-preview model
+ * while keeping low-latency text generation suitable for operator chat.
  * Override via VITE_GEMINI_MODEL when your project has access to a different model.
  */
-export const GEMINI_MODEL =
-  (import.meta.env.VITE_GEMINI_MODEL as string | undefined)?.trim() || 'gemini-3.1-flash-lite-preview'
+export const DEFAULT_GEMINI_MODEL = 'gemini-3.1-flash-lite'
+export const RETIRED_GEMINI_MODELS = new Set(['gemini-3.1-flash-lite-preview'])
+
+export const normalizeGeminiModel = (model?: string): string => {
+  const configured = model?.trim()
+  if (!configured || RETIRED_GEMINI_MODELS.has(configured)) return DEFAULT_GEMINI_MODEL
+  return configured
+}
+
+export const GEMINI_MODEL = normalizeGeminiModel(import.meta.env.VITE_GEMINI_MODEL as string | undefined)
 
 export const GEMINI_GENERATE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 

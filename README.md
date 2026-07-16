@@ -163,7 +163,7 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 Run both backend and frontend in separate terminals for the full real-time application.
 
 ### Optional Gemini AI Configuration
-The assistant uses **Gemini Flash-Lite** by default (`gemini-3.1-flash-lite-preview`) because it offers significantly higher free-tier daily request limits than `gemini-2.5-flash`, while remaining fast enough for operational chat and briefing summaries. The client also paces requests (~15 per minute) and retries once on rate-limit responses.
+The assistant uses **Gemini Flash-Lite** by default (`gemini-3.1-flash-lite`) for low-latency operational chat and briefing summaries. Retired preview model values such as `gemini-3.1-flash-lite-preview` are normalized to the supported Flash-Lite model at runtime, so stale environment variables do not break the assistant. The client also paces requests (~15 per minute) and retries once on rate-limit responses.
 
 To enable natural language briefings and chat:
 1. Set `GEMINI_API_KEY` in `backend/.env` for backend-generated recommendation explanations.
@@ -231,5 +231,4 @@ npm audit
 - **Testing**: Vitest, React Testing Library, Supertest
 
 ---
-
 
