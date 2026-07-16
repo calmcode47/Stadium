@@ -6,7 +6,7 @@
  * Override via VITE_GEMINI_MODEL when your project has access to a different model.
  */
 export const DEFAULT_GEMINI_MODEL = 'gemini-3.1-flash-lite'
-export const RETIRED_GEMINI_MODELS = new Set(['gemini-3.1-flash-lite-preview'])
+export const RETIRED_GEMINI_MODELS = new Set(['gemini-2.0-flash-lite', 'gemini-3.1-flash-lite-preview'])
 
 export const normalizeGeminiModel = (model?: string): string => {
   const configured = model?.trim()

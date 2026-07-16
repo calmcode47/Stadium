@@ -8,6 +8,7 @@ describe('gemini config', () => {
   })
 
   it('normalizes retired preview model names', () => {
+    expect(normalizeGeminiModel('gemini-2.0-flash-lite')).toBe('gemini-3.1-flash-lite')
     expect(normalizeGeminiModel('gemini-3.1-flash-lite-preview')).toBe('gemini-3.1-flash-lite')
     expect(normalizeGeminiModel(' gemini-3.1-flash-lite-preview ')).toBe('gemini-3.1-flash-lite')
     expect(normalizeGeminiModel('gemini-3.1-pro-preview')).toBe('gemini-3.1-pro-preview')
