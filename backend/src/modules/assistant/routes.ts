@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { getEnv } from '../../config/env'
 import { getDatabase } from '../../db/client'
 import { decisionLogEntries, operators } from '../../db/schema'
-import { explainWithAI, generateRecommendations } from '../../lib/assistantEngine'
+import { chatWithAI, explainWithAI, generateRecommendations } from '../../lib/assistantEngine'
 import { createId, isoNow, timeOfDay } from '../../lib/ids'
 import { badRequest, notFound } from '../../lib/httpErrors'
 import {
@@ -22,6 +22,13 @@ const paramsSchema = z.object({ id: z.string().min(1) })
 const decisionSchema = z.object({
   action: z.enum(['accepted', 'dismissed']),
   operatorId: z.string().min(1).optional()
+})
+const chatSchema = z.object({
+  message: z.string().trim().min(1).max(500),
+  history: z.array(z.object({
+    role: z.enum(['user', 'model']),
+    text: z.string().trim().min(1).max(1000)
+  })).max(8).optional().default([])
 })
 
 router.get('/recommendations', async (_req, res, next) => {
@@ -43,6 +50,19 @@ router.get('/recommendations', async (_req, res, next) => {
     )
     setCachedRecommendations(fingerprint, data)
     res.json({ data })
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.post('/chat', requireAuth, validate('body', chatSchema), async (req, res, next) => {
+  try {
+    const body = req.body as z.infer<typeof chatSchema>
+    const apiKey = getEnv().GEMINI_API_KEY.trim()
+    if (!apiKey) throw badRequest('Gemini API key is not configured on the backend')
+
+    const text = await chatWithAI(body.message, body.history, getOperationsState(), apiKey)
+    res.json({ data: { text } })
   } catch (error) {
     next(error)
   }

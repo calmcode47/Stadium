@@ -21,6 +21,7 @@ import Info from 'lucide-react/dist/esm/icons/info.mjs'
 import Minus from 'lucide-react/dist/esm/icons/minus.mjs'
 import { useOperations } from '@/hooks/useOperations'
 import { explainWithAI, chatWithAI, type Recommendation, type ChatMessage } from '@/lib/assistantEngine'
+import { apiRequest } from '@/lib/apiClient'
 import Panel from '../design-system/Panel'
 import Button from '../design-system/Button'
 import DecisionLog from './DecisionLog'
@@ -79,8 +80,8 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
 
   const handleSendMessage = async (text: string) => {
     if (!text.trim() || isSending) return
-    if (!geminiApiKey) {
-      setChatError('Please configure a Gemini API key in Settings (⚙️) to start the chat.')
+    if (!geminiApiKey && !isAuthenticated) {
+      setChatError('Please sign in or configure a Gemini API key in Settings to start the chat.')
       return
     }
 
@@ -92,13 +93,17 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
     setIsSending(true)
 
     try {
-      const operationsState = { matches, zones, alerts, tournament, rounds, sections }
-      const aiResponse = await chatWithAI(
-        newMsg.text,
-        messages,
-        operationsState,
-        geminiApiKey
-      )
+      const aiResponse = geminiApiKey
+        ? await chatWithAI(
+          newMsg.text,
+          messages,
+          { matches, zones, alerts, tournament, rounds, sections },
+          geminiApiKey
+        )
+        : (await apiRequest<{ text: string }>('/assistant/chat', {
+          method: 'POST',
+          body: JSON.stringify({ message: newMsg.text, history: messages })
+        })).text
       setMessages(prev => [...prev, { role: 'model', text: aiResponse }])
     } catch (err) {
       console.error(err)
@@ -600,9 +605,9 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
 
                   {/* Chat Input Area */}
                   <div className="border-t border-cyan/15 pt-3 mt-3 flex flex-col gap-2">
-                    {!geminiApiKey && (
-                      <div className="px-2 py-1.5 bg-amber/5 border border-amber/25 text-amber font-mono text-[8px] uppercase tracking-wider rounded-[2px] text-center">
-                        Please configure a Gemini API key in Settings (⚙️) to start the chat.
+                    {!geminiApiKey && isAuthenticated && (
+                      <div className="px-2 py-1.5 bg-cyan/5 border border-cyan/25 text-cyan font-mono text-[8px] uppercase tracking-wider rounded-[2px] text-center">
+                        Using secure backend Gemini configuration.
                       </div>
                     )}
                     
@@ -619,14 +624,14 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
                         type="text"
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
-                        placeholder={geminiApiKey ? "Ask the assistant..." : "Configure API key to chat"}
-                        disabled={!geminiApiKey || isSending}
+                        placeholder={geminiApiKey || isAuthenticated ? "Ask the assistant..." : "Configure API key to chat"}
+                        disabled={(!geminiApiKey && !isAuthenticated) || isSending}
                         className="flex-grow bg-elevated border border-cyan/20 text-text-primary font-mono text-[10px] px-2.5 py-1.5 min-h-11 rounded-[2px] outline-none hover:border-cyan/50 focus:border-cyan disabled:opacity-50 transition-colors"
                       />
                       <button
                         type="submit"
                         aria-label="Send assistant chat message"
-                        disabled={!geminiApiKey || isSending || !inputValue.trim()}
+                        disabled={(!geminiApiKey && !isAuthenticated) || isSending || !inputValue.trim()}
                         className="min-h-11 min-w-11 bg-cyan/15 hover:bg-cyan/25 border border-cyan/35 hover:border-cyan text-cyan disabled:opacity-40 disabled:hover:bg-cyan/15 disabled:hover:border-cyan/35 disabled:hover:text-cyan transition-all rounded-none flex items-center justify-center"
                       >
                         <Send size={12} />

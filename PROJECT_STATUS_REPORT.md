@@ -25,7 +25,7 @@ Challenge-alignment notes and a concrete match-day walkthrough live in [`README.
 ## 2. Core Architectural Approach
 The platform uses a strict **two-layer design** for the Smart Operations Assistant:
 1. **Deterministic Decision Engine**: A pure, framework-free TypeScript engine (mirrored in `frontend/src/lib/assistantEngine.ts` and `backend/src/lib/assistantEngine.ts`). It evaluates the current operations state (venue zones, stand sections, live matches, unresolved alerts, bracket rounds) against defined thresholds to generate structured recommendations.
-2. **Decoupled AI Explanation Layer**: Uses Google Gemini (default `gemini-3.1-flash-lite`) to synthesize deterministic reasoning into a natural-language “AI Summary” and to power chat. Retired preview model values are normalized to the supported Flash-Lite model. If the API is offline or the key is missing, explanations fall back to a local template generator.
+2. **Decoupled AI Explanation Layer**: Uses Google Gemini (default `gemini-3.1-flash-lite`) to synthesize deterministic reasoning into a natural-language “AI Summary” and to power chat. Retired preview model values are normalized to the supported Flash-Lite model. Production chat uses a backend proxy so the Gemini key stays server-side; if the API is offline or the key is missing, explanations fall back to a local template generator.
 
 ```
 +-------------------------------------------------------------+
@@ -159,7 +159,7 @@ Conservative, additive UI hardening (no logic rewrite):
 
 ### Testing (verified locally):
 *   **Frontend**: **40 / 40 passing** (6 files) — Vitest + Testing Library / jsdom.
-*   **Backend**: **37 / 37 passing** (9 files) — Vitest + Supertest (auth, routes, assistant engine, Gemini config, recommendation cache, WebSocket-related coverage as implemented).
+*   **Backend**: **39 / 39 passing** (10 files) — Vitest + Supertest (auth, routes, assistant chat proxy, assistant engine, Gemini config, recommendation cache, WebSocket-related coverage as implemented).
 *   Assistant-engine focused cases: **19** frontend + **13** backend.
 
 ### Production Deploy:

@@ -305,6 +305,89 @@ export const explainWithAI = async (recommendation: Recommendation, apiKey?: str
   }
 }
 
+export interface ChatMessage {
+  role: 'user' | 'model'
+  text: string
+}
+
+/** Answers an operator chat prompt using the current operations state and server-side Gemini key. */
+export const chatWithAI = async (
+  message: string,
+  history: ChatMessage[],
+  state: OperationsState,
+  apiKey?: string
+): Promise<string> => {
+  if (!apiKey) throw new Error('Gemini API key is not configured')
+
+  const liveMatches = state.matches
+    .map(match => `- Match: ${match.teamHome} vs ${match.teamAway} (${match.scoreHome}-${match.scoreAway}), elapsed: ${match.timeElapsed} mins, status: ${match.statusLabel}`)
+    .join('\n')
+  const zoneOccupancies = state.zones
+    .map(zone => `- Zone: ${zone.name}, occupancy: ${zone.occupancy}/${zone.maxCapacity} (${Math.round((zone.occupancy / zone.maxCapacity) * 100)}%), status: ${zone.statusLabel}`)
+    .join('\n')
+  const standSections = state.sections
+    .map(section => `- Section: ${section.name}, gates: ${section.gateStatus.toUpperCase()}, incidents: ${section.incidents}, occupancy: ${section.occupancy}/${section.maxCapacity}`)
+    .join('\n')
+  const activeAlerts = state.alerts
+    .filter(alert => !alert.isAcknowledged)
+    .map(alert => `- Alert [${alert.level.toUpperCase()}] at ${alert.timestamp}: ${alert.message}`)
+    .join('\n')
+  const currentRecommendations = generateRecommendations(state)
+    .map(rec => `- [${rec.priority.toUpperCase()}] ${rec.title}: ${rec.suggestedAction}`)
+    .join('\n')
+
+  const systemInstruction = `You are the AI Assistant for the Smart Stadium & Tournament Operations control room.
+Use only the operations state below. Keep answers concise, practical, and suitable for an on-duty operator.
+
+[LIVE MATCHES]
+${liveMatches || 'No matches listed.'}
+
+[STADIUM ZONE OCCUPANCY]
+${zoneOccupancies || 'No zone data.'}
+
+[STAND SECTIONS]
+${standSections || 'No section data.'}
+
+[UNACKNOWLEDGED ALERTS]
+${activeAlerts || 'All alerts are acknowledged/clear.'}
+
+[CURRENT DECISION RECOMMENDATIONS]
+${currentRecommendations || 'No active recommendations/anomalies detected.'}`
+
+  const recentHistory = history.slice(-8)
+  const response = await fetch(getGeminiGenerateUrl(), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey.trim()
+    },
+    body: JSON.stringify({
+      contents: [
+        ...recentHistory.map(item => ({
+          role: item.role,
+          parts: [{ text: item.text }]
+        })),
+        {
+          role: 'user',
+          parts: [{ text: message }]
+        }
+      ],
+      systemInstruction: {
+        parts: [{ text: systemInstruction }]
+      },
+      generationConfig: { maxOutputTokens: 400, temperature: 0.25 }
+    })
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '')
+    throw new Error(`Gemini request failed with status ${response.status}${errorText ? `: ${errorText}` : ''}`)
+  }
+
+  const data = (await response.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }
+  return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || 'No response received from the operations assistant.'
+}
+
 const templateExplanation = (reasoning: string[]): string => `${reasoning.map(reason => reason.trim().replace(/\.$/, '')).join(' and ')}.`
 
 const minutesBetween = (from?: string, to?: string): number | null => {
