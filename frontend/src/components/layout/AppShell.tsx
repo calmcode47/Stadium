@@ -4,18 +4,11 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 import AssistantPanel from '../assistant/AssistantPanel'
-import LoginScreen from '../auth/LoginScreen'
-import { useOperations } from '@/hooks/useOperations'
 
 export const AppShell: React.FC = () => {
   const location = useLocation()
   const shouldReduceMotion = useReducedMotion()
   const [isAssistantOpen, setIsAssistantOpen] = useState(false)
-  const { isAuthenticated } = useOperations()
-
-  if (!isAuthenticated) {
-    return <LoginScreen />
-  }
 
   return (
     <div className="min-h-screen md:min-h-screen md:h-auto xl:h-screen bg-control-room text-primary relative flex flex-col md:overflow-x-hidden xl:overflow-x-hidden xl:overflow-y-auto">
