@@ -81,7 +81,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ isOpen, onToggle
   const handleSendMessage = async (text: string) => {
     if (!text.trim() || isSending) return
     if (!geminiApiKey && !isAuthenticated) {
-      setChatError('Please sign in or configure a Gemini API key in Settings to start the chat.')
+      setChatError('Please configure a Gemini API key in Settings to start the chat.')
       return
     }
 

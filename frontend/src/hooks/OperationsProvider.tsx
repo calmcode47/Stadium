@@ -44,6 +44,13 @@ const resolveGeminiApiKey = (): string => {
   return envKey || storedKey
 }
 
+const DEFAULT_OPERATOR: OperatorProfile = {
+  id: 'op-operator',
+  name: 'Operations Alpha',
+  email: 'operator@stadium.local',
+  role: 'operator'
+}
+
 /** Provides live operations state, API actions, and WebSocket update handling to the app shell. */
 export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [matches, setMatches] = useState<Match[]>(mockMatches)
@@ -58,7 +65,7 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [dismissedRecIds, setDismissedRecIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [operator, setOperator] = useState<OperatorProfile | null>(() => getStoredOperator())
+  const [operator, setOperator] = useState<OperatorProfile>(() => getStoredOperator() || DEFAULT_OPERATOR)
   const [authError, setAuthError] = useState<string | null>(null)
   const [geminiApiKey, setGeminiApiKeyState] = useState<string>(resolveGeminiApiKey)
 
@@ -117,19 +124,43 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, [dismissedRecIds])
 
+
+  const login = useCallback(async (email: string, password: string) => {
+    setAuthError(null)
+    try {
+      const result = await loginRequest(email, password)
+      setOperator(result.operator)
+      await refreshSnapshot()
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : 'Login failed')
+      throw err
+    }
+  }, [refreshSnapshot])
+
+  const logout = useCallback(() => {
+    clearSession()
+    setOperator(DEFAULT_OPERATOR)
+    setDecisionLog([])
+  }, [])
+
   useEffect(() => {
     void refreshSnapshot()
   }, [refreshSnapshot])
 
   useEffect(() => {
-    if (!getStoredToken()) return
+    if (!getStoredToken()) {
+      login('operator@stadium.local', 'Stadium123!').catch(() => {
+        // Backend offline or running in mock mode; continue with default operator
+      })
+      return
+    }
     apiRequest<OperatorProfile>('/auth/me')
       .then(setOperator)
       .catch(() => {
         clearSession()
-        setOperator(null)
+        setOperator(DEFAULT_OPERATOR)
       })
-  }, [])
+  }, [login])
 
   useEffect(() => {
     const unsubscribers = [
@@ -164,23 +195,6 @@ export const OperationsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, [refreshDecisionLog, refreshRecommendations])
 
-  const login = useCallback(async (email: string, password: string) => {
-    setAuthError(null)
-    try {
-      const result = await loginRequest(email, password)
-      setOperator(result.operator)
-      await refreshSnapshot()
-    } catch (err) {
-      setAuthError(err instanceof Error ? err.message : 'Login failed')
-      throw err
-    }
-  }, [refreshSnapshot])
-
-  const logout = useCallback(() => {
-    clearSession()
-    setOperator(null)
-    setDecisionLog([])
-  }, [])
 
   const acknowledgeAlert = useCallback((id: string) => {
     if (!canMutate) return
